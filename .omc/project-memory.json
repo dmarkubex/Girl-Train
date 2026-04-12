@@ -1,0 +1,381 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775921276097,
+  "projectRoot": "/Volumes/Out-Memory/Girl-Train",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "vite",
+        "version": "6.0.0",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc && vite build",
+      "preview": "vite preview"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "openspec": {
+      "path": "openspec",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1775921276079,
+      "keyFiles": [
+        "config.yaml"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 2,
+      "lastAccessed": 1775921276091,
+      "keyFiles": [
+        "main.ts",
+        "router.ts"
+      ]
+    },
+    "src/components": {
+      "path": "src/components",
+      "purpose": "UI components",
+      "fileCount": 0,
+      "lastAccessed": 1775921276093,
+      "keyFiles": []
+    },
+    "src/utils": {
+      "path": "src/utils",
+      "purpose": "Utility functions",
+      "fileCount": 0,
+      "lastAccessed": 1775921276093,
+      "keyFiles": []
+    },
+    "src/views": {
+      "path": "src/views",
+      "purpose": "View templates",
+      "fileCount": 0,
+      "lastAccessed": 1775921276094,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/views/workout.ts",
+      "accessCount": 25,
+      "lastAccessed": 1775923717722,
+      "type": "file"
+    },
+    {
+      "path": "src/views/history.ts",
+      "accessCount": 22,
+      "lastAccessed": 1775923691132,
+      "type": "file"
+    },
+    {
+      "path": "src/timer/engine.ts",
+      "accessCount": 14,
+      "lastAccessed": 1775923684278,
+      "type": "file"
+    },
+    {
+      "path": "src/views/config.ts",
+      "accessCount": 10,
+      "lastAccessed": 1775923586924,
+      "type": "file"
+    },
+    {
+      "path": "src/views/complete.ts",
+      "accessCount": 10,
+      "lastAccessed": 1775923695318,
+      "type": "file"
+    },
+    {
+      "path": "src/main.ts",
+      "accessCount": 8,
+      "lastAccessed": 1775923567559,
+      "type": "file"
+    },
+    {
+      "path": "src/timer/snapshot.ts",
+      "accessCount": 8,
+      "lastAccessed": 1775923571219,
+      "type": "file"
+    },
+    {
+      "path": "src/views/home.ts",
+      "accessCount": 8,
+      "lastAccessed": 1775923685735,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 6,
+      "lastAccessed": 1775923587225,
+      "type": "file"
+    },
+    {
+      "path": "index.html",
+      "accessCount": 6,
+      "lastAccessed": 1775923587384,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 6,
+      "lastAccessed": 1775923598521,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/chart-wrapper.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775923571806,
+      "type": "file"
+    },
+    {
+      "path": "vite.config.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775923587308,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 5,
+      "lastAccessed": 1775923595660,
+      "type": "directory"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/tasks.md",
+      "accessCount": 4,
+      "lastAccessed": 1775923567236,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/design.md",
+      "accessCount": 4,
+      "lastAccessed": 1775923567384,
+      "type": "file"
+    },
+    {
+      "path": "src/router.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775923570589,
+      "type": "file"
+    },
+    {
+      "path": "src/db.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775923570897,
+      "type": "file"
+    },
+    {
+      "path": "src/views/register.ts",
+      "accessCount": 4,
+      "lastAccessed": 1775923586986,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/proposal.md",
+      "accessCount": 3,
+      "lastAccessed": 1775922869427,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/specs/session-tracking/spec.md",
+      "accessCount": 3,
+      "lastAccessed": 1775922869612,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/specs/exercise-config/spec.md",
+      "accessCount": 3,
+      "lastAccessed": 1775922869771,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/specs/stats-dashboard/spec.md",
+      "accessCount": 3,
+      "lastAccessed": 1775922869912,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/specs/workout-timer/spec.md",
+      "accessCount": 3,
+      "lastAccessed": 1775922870132,
+      "type": "file"
+    },
+    {
+      "path": "src/types.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775923567456,
+      "type": "file"
+    },
+    {
+      "path": "src/timer/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775923571320,
+      "type": "file"
+    },
+    {
+      "path": "src/components/timer-display.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775923571622,
+      "type": "file"
+    },
+    {
+      "path": "src/styles/variables.css",
+      "accessCount": 3,
+      "lastAccessed": 1775923587068,
+      "type": "file"
+    },
+    {
+      "path": "src/styles/main.css",
+      "accessCount": 3,
+      "lastAccessed": 1775923587154,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.json",
+      "accessCount": 3,
+      "lastAccessed": 1775923587483,
+      "type": "file"
+    },
+    {
+      "path": "src/utils/date.ts",
+      "accessCount": 3,
+      "lastAccessed": 1775923679353,
+      "type": "file"
+    },
+    {
+      "path": ".ai/handoff.md",
+      "accessCount": 3,
+      "lastAccessed": 1775923870333,
+      "type": "file"
+    },
+    {
+      "path": "openspec/changes/scoliosis-exercise-tracker/specs/data-persistence/spec.md",
+      "accessCount": 2,
+      "lastAccessed": 1775921487107,
+      "type": "file"
+    },
+    {
+      "path": ".ai/prototype/home.html",
+      "accessCount": 2,
+      "lastAccessed": 1775923226448,
+      "type": "file"
+    },
+    {
+      "path": ".ai/prototype/workout.html",
+      "accessCount": 2,
+      "lastAccessed": 1775923226593,
+      "type": "file"
+    },
+    {
+      "path": ".ai/prototype/complete.html",
+      "accessCount": 2,
+      "lastAccessed": 1775923226708,
+      "type": "file"
+    },
+    {
+      "path": ".ai/prototype/history.html",
+      "accessCount": 2,
+      "lastAccessed": 1775923226873,
+      "type": "file"
+    },
+    {
+      "path": ".ai/prototype/config.html",
+      "accessCount": 2,
+      "lastAccessed": 1775923226995,
+      "type": "file"
+    },
+    {
+      "path": "src/timer",
+      "accessCount": 2,
+      "lastAccessed": 1775923269447,
+      "type": "directory"
+    },
+    {
+      "path": "src/state.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775923570689,
+      "type": "file"
+    },
+    {
+      "path": "src/timer/audio.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775923571087,
+      "type": "file"
+    },
+    {
+      "path": "src/components/progress-bar.ts",
+      "accessCount": 2,
+      "lastAccessed": 1775923571702,
+      "type": "file"
+    },
+    {
+      "path": "public/manifest.json",
+      "accessCount": 2,
+      "lastAccessed": 1775923598114,
+      "type": "file"
+    },
+    {
+      "path": ".ai/ai-index.md",
+      "accessCount": 1,
+      "lastAccessed": 1775921320729,
+      "type": "file"
+    },
+    {
+      "path": "public/icon-192x192.svg",
+      "accessCount": 1,
+      "lastAccessed": 1775923363563,
+      "type": "file"
+    },
+    {
+      "path": "public/icon-512x512.svg",
+      "accessCount": 1,
+      "lastAccessed": 1775923365607,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

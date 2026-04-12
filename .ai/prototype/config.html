@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>配置管理 - 脊柱侧弯锻炼追踪器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Status Bar Spacer -->
+    <div class="h-6 bg-white"></div>
+
+    <div class="max-w-md mx-auto bg-white min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="px-5 pt-6 pb-4 border-b border-gray-100">
+            <h1 class="text-2xl font-bold text-gray-900">锻炼配置</h1>
+            <p class="text-gray-500 text-sm mt-1">管理你的锻炼计划</p>
+        </header>
+
+        <!-- Project Rest Settings -->
+        <div class="px-5 py-4 border-b border-gray-100" data-annotation="项目间休息时长配置">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-900 font-medium">项目间休息时长</p>
+                    <p class="text-gray-500 text-sm">不同项目之间的休息时间</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="number" value="60" class="w-20 px-3 py-2 text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <span class="text-gray-600 text-sm">秒</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exercise List -->
+        <div class="flex-1 overflow-y-auto" data-annotation="锻炼项目列表 - 可编辑和重排序">
+            <!-- Exercise 1 -->
+            <div class="px-5 py-4 border-b border-gray-100 hover:bg-gray-50">
+                <div class="flex items-start gap-3">
+                    <!-- Drag Handle / Order Buttons -->
+                    <div class="flex flex-col gap-1 pt-1">
+                        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 14l5-5 5 5z"/>
+                            </svg>
+                        </button>
+                        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 10l5 5 5-5z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Exercise Info -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-1 rounded">1</span>
+                            <input type="text" value="抱头展胸" class="flex-1 text-gray-900 font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-2 -ml-2">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-gray-500 text-xs">时长(秒)</label>
+                                <input type="number" value="70" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">休息(秒)</label>
+                                <input type="number" value="15" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">组数</label>
+                                <input type="number" value="9" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delete Button -->
+                    <button class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg mt-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Exercise 2 -->
+            <div class="px-5 py-4 border-b border-gray-100 hover:bg-gray-50">
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col gap-1 pt-1">
+                        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 14l5-5 5 5z"/>
+                            </svg>
+                        </button>
+                        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 10l5 5 5-5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-1 rounded">2</span>
+                            <input type="text" value="上胸弯对抗" class="flex-1 text-gray-900 font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-2 -ml-2">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-gray-500 text-xs">时长(秒)</label>
+                                <input type="number" value="70" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">休息(秒)</label>
+                                <input type="number" value="15" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">组数</label>
+                                <input type="number" value="9" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg mt-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Exercise 3 -->
+            <div class="px-5 py-4 border-b border-gray-100 hover:bg-gray-50">
+                <div class="flex items-start gap-3">
+                    <div class="flex flex-col gap-1 pt-1">
+                        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 14l5-5 5 5z"/>
+                            </svg>
+                        </button>
+                        <button class="p-1 text-gray-300 cursor-not-allowed rounded">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M7 10l5 5 5-5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-1 rounded">3</span>
+                            <input type="text" value="侧弯拉伸" class="flex-1 text-gray-900 font-medium bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-orange-400 rounded px-2 -ml-2">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-gray-500 text-xs">时长(秒)</label>
+                                <input type="number" value="60" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">休息(秒)</label>
+                                <input type="number" value="10" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 text-xs">组数</label>
+                                <input type="number" value="6" class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg mt-4">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add New Exercise Button -->
+        <div class="px-5 py-4 border-t border-gray-100" data-annotation="添加新项目按钮">
+            <button class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium hover:border-orange-400 hover:text-orange-500 transition-colors flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                添加锻炼项目
+            </button>
+        </div>
+
+        <!-- Data Management -->
+        <div class="px-5 py-4 border-t border-gray-100" data-annotation="数据导出/导入">
+            <p class="text-gray-500 text-sm mb-3">数据管理</p>
+            <div class="flex gap-3">
+                <button class="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    导出数据
+                </button>
+                <button class="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    导入数据
+                </button>
+            </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="px-5 py-4 pb-12" data-annotation="保存配置按钮">
+            <button class="w-full py-4 bg-gradient-to-r from-orange-400 to-orange-500 text-white text-lg font-bold rounded-2xl shadow-lg hover:from-orange-500 hover:to-orange-600 transition-all">
+                保存配置
+            </button>
+        </div>
+    </div>
+</body>
+</html>

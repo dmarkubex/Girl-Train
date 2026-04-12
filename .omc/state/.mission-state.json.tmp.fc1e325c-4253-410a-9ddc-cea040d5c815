@@ -1,0 +1,45 @@
+{
+  "updatedAt": "2026-04-11T14:23:41.014Z",
+  "missions": [
+    {
+      "id": "session:02e17c55-21d6-4d73-ac7a-73b050d658b4:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-04-11T14:23:41.014Z",
+      "updatedAt": "2026-04-11T14:23:41.014Z",
+      "status": "running",
+      "workerCount": 1,
+      "taskCounts": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 1,
+        "completed": 0,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "builder-timer:aa2aed8",
+          "role": "builder-timer",
+          "ownership": "aa2aed81f6f5249a0",
+          "status": "running",
+          "currentStep": null,
+          "latestUpdate": null,
+          "completedSummary": null,
+          "updatedAt": "2026-04-11T14:23:41.014Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:aa2aed81f6f5249a0:2026-04-11T14:23:41.014Z",
+          "at": "2026-04-11T14:23:41.014Z",
+          "kind": "update",
+          "agent": "builder-timer:aa2aed8",
+          "detail": "started builder-timer:aa2aed8",
+          "sourceKey": "session-start:aa2aed81f6f5249a0"
+        }
+      ]
+    }
+  ]
+}
