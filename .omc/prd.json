@@ -1,0 +1,88 @@
+{
+  "title": "Fix review findings - workout save, snapshot hooks, calendar dates, home page, PWA manifest, history date range, snapshot hook order",
+  "stories": [
+    {
+      "id": "US-001",
+      "priority": "CRITICAL",
+      "description": "Save completed workouts to IndexedDB in handleWorkoutComplete",
+      "acceptanceCriteria": [
+        "handleWorkoutComplete() in workout.ts:381 calls saveSession(session) before navigating to 'complete'",
+        "saveSession() call includes try/catch error handling",
+        "handleWorkoutComplete is async (or wraps saveSession in Promise) to ensure save completes before navigation",
+        "TypeScript compiles without errors (npm run build)"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "priority": "HIGH",
+      "description": "Wire snapshot hooks into timer initialization",
+      "acceptanceCriteria": [
+        "initializeSnapshotHooks(timerEngine) is called after constructing TimerEngine in initializeTimer()",
+        "initializeSnapshotHooks is imported from '../timer/snapshot' in workout.ts",
+        "npm run build passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "priority": "HIGH",
+      "description": "Fix history calendar date shift by using plain YYYY-MM-DD formatter",
+      "acceptanceCriteria": [
+        "history.ts:402 getBusinessDate(startOfWeek.getTime()) replaced with plain local date formatter",
+        "history.ts:412 getBusinessDate(endOfMonth.getTime()) replaced with plain local date formatter",
+        "history.ts:427 getBusinessDate(dayDate.getTime()) replaced with plain local date formatter in generateWeekData",
+        "history.ts:457 getBusinessDate(dayDate.getTime()) replaced with plain local date formatter in generateMonthData",
+        "Uses Date toLocaleDateString('en-CA') or equivalent YYYY-MM-DD format (no business date offset)",
+        "npm run build passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "priority": "MEDIUM",
+      "description": "Fix home page completion status check and percentage scale",
+      "acceptanceCriteria": [
+        "home.ts:205 checks session.status === 'completed' (not just session.date === today)",
+        "home.ts:217 renders Math.round(session.completionRate * 100) (not Math.round(completionRate))",
+        "npm run build passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-005",
+      "priority": "MEDIUM",
+      "description": "Fix PWA manifest to reference SVG icons instead of missing PNG files",
+      "acceptanceCriteria": [
+        "public/manifest.json:12 references icon-192x192.svg (not .png)",
+        "public/manifest.json:18 references icon-512x512.svg (not .png)",
+        "Both icon entries have type: 'image/svg+xml'",
+        "Both icon entries have correct sizes values for SVG",
+        "npm run build passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-006",
+      "priority": "MEDIUM",
+      "description": "Fix history week/month date range off-by-one (week end should be +6 not +7, month end should be last day)",
+      "acceptanceCriteria": [
+        "history.ts:402 endOfWeek is set to startOfWeek.getDate() + 7, which is the day AFTER Sunday — fix to +6 so end date is the last day of the current week",
+        "history.ts:412 endOfMonth is set to the 1st of next month — fix to the last day of the current month (lastDay = new Date(year, month + 1, 0))",
+        "npm run build passes"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-007",
+      "priority": "LOW",
+      "description": "Move snapshot hook initialization before engine start to avoid crash recovery gap",
+      "acceptanceCriteria": [
+        "initializeSnapshotHooks(timerEngine) is called immediately after constructing TimerEngine, BEFORE calling start() or restoreFromSnapshot()",
+        "This ensures hooks are registered before engine's first saveSnapshot() call at engine.ts:67",
+        "npm run build passes"
+      ],
+      "passes": true
+    }
+  ]
+}

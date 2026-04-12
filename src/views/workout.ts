@@ -7,7 +7,7 @@ import { getConfig, saveSession } from '../db';
 import { navigate } from '../router';
 import { TimerEngine, type TimerState, type TimerContext } from '../timer/engine';
 import { AudioManager } from '../timer/audio';
-import { loadSnapshot, clearSnapshot, saveIncompleteAndClear, markSnapshotPaused, markSnapshotResumed, type WorkoutSnapshot } from '../timer/snapshot';
+import { loadSnapshot, clearSnapshot, saveIncompleteAndClear, markSnapshotPaused, markSnapshotResumed, initializeSnapshotHooks, type WorkoutSnapshot } from '../timer/snapshot';
 import { setState, getState } from '../state';
 import { createTimerDisplay, updateTimerDisplay } from '../components/timer-display';
 import { createProgressBar } from '../components/progress-bar';
@@ -190,6 +190,9 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
       onTick: handleTimerTick,
       onComplete: handleWorkoutComplete,
     });
+
+    // Wire snapshot hooks BEFORE starting — engine.saveSnapshot() is called inside start()/restoreFromSnapshot()
+    initializeSnapshotHooks(timerEngine);
 
     if (snapshot) {
       // Restore from snapshot
@@ -378,9 +381,14 @@ async function handleEndWorkout(): Promise<void> {
   navigate('complete');
 }
 
-function handleWorkoutComplete(session: any): void {
+async function handleWorkoutComplete(session: any): Promise<void> {
   cleanupWorkout();
   setState('lastSession', session);
+  try {
+    await saveSession(session);
+  } catch (err) {
+    console.error('Failed to save completed workout session:', err);
+  }
   navigate('complete');
 }
 

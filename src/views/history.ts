@@ -6,7 +6,10 @@
 import { getSessionsByDateRange } from '../db';
 import { createLineChart, destroyChart } from '../components/chart-wrapper';
 import type { Session } from '../types';
-import { getBusinessDate } from '../utils/date';
+
+function toLocalDateString(ts: number): string {
+  return new Date(ts).toLocaleDateString('en-CA');
+}
 
 let trendChart: any = null;
 let currentView: 'week' | 'month' = 'week';
@@ -396,21 +399,21 @@ async function getSessionsForWeek(date: Date): Promise<Session[]> {
   startOfWeek.setHours(0, 0, 0, 0);
 
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
 
   return getSessionsByDateRange(
-    getBusinessDate(startOfWeek.getTime()),
-    getBusinessDate(endOfWeek.getTime())
+    toLocalDateString(startOfWeek.getTime()),
+    toLocalDateString(endOfWeek.getTime())
   );
 }
 
 async function getSessionsForMonth(date: Date): Promise<Session[]> {
   const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
   return getSessionsByDateRange(
-    getBusinessDate(startOfMonth.getTime()),
-    getBusinessDate(endOfMonth.getTime())
+    toLocalDateString(startOfMonth.getTime()),
+    toLocalDateString(lastDayOfMonth.getTime())
   );
 }
 
@@ -424,7 +427,7 @@ function generateWeekData(date: Date, sessions: Session[]): CalendarData {
   for (let i = 0; i < 7; i++) {
     const dayDate = new Date(startOfWeek);
     dayDate.setDate(startOfWeek.getDate() + i);
-    const dateStr = getBusinessDate(dayDate.getTime());
+    const dateStr = toLocalDateString(dayDate.getTime());
 
     days.push({
       date: dayDate,
@@ -454,7 +457,7 @@ function generateMonthData(date: Date, sessions: Session[]): CalendarData {
   // Add actual days
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const dayDate = new Date(year, month, day);
-    const dateStr = getBusinessDate(dayDate.getTime());
+    const dateStr = toLocalDateString(dayDate.getTime());
 
     currentWeek.push({
       date: dayDate,

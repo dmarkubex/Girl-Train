@@ -1,0 +1,41 @@
+# Ralph Progress - Iteration 1
+
+## Task
+Fix 5 review findings: workout save, snapshot hooks, calendar dates, home page, PWA manifest
+
+## Stories Status
+- US-001 (CRITICAL): DONE ✓
+- US-002 (HIGH): DONE ✓
+- US-003 (HIGH): DONE ✓
+- US-004 (MEDIUM): DONE ✓
+- US-005 (MEDIUM): DONE ✓
+
+## Changes Made
+
+### US-001 (CRITICAL) - workout.ts
+- Made handleWorkoutComplete async
+- Added await saveSession(session) with try/catch before navigate('complete')
+
+### US-002 (HIGH) - workout.ts
+- Added initializeSnapshotHooks import from '../timer/snapshot'
+- Called initializeSnapshotHooks(timerEngine) after engine start/restore
+
+### US-003 (HIGH) - history.ts
+- Added toLocalDateString() helper: Date.toLocaleDateString('en-CA')
+- Removed unused getBusinessDate import
+- Replaced 4 getBusinessDate calls in calendar functions with toLocalDateString
+
+### US-004 (MEDIUM) - home.ts
+- Changed isTodayCompleted to check session.status === 'completed'
+- Fixed completionRate to multiply by 100 before Math.round
+
+### US-005 (MEDIUM) - manifest.json
+- Changed icon references from .png to .svg
+- Changed type from image/png to image/svg+xml
+
+## Deslop Pass
+No slop found. All changes are minimal targeted fixes.
+Build passes cleanly.
+
+## Verification
+npm run build: PASS ✓

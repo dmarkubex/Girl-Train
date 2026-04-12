@@ -202,7 +202,7 @@ function updateTodayStatus(session: any): void {
   if (!statusCard) return;
 
   const today = getBusinessDate(Date.now());
-  const isTodayCompleted = session && session.date === today;
+  const isTodayCompleted = session && session.date === today && session.status === 'completed';
 
   if (isTodayCompleted) {
     // Completed today
@@ -214,7 +214,7 @@ function updateTodayStatus(session: any): void {
         </div>
         <div class="text-right">
           <p class="text-green-700 text-sm">完成率</p>
-          <p class="text-green-900 text-2xl font-bold">${Math.round(session.completionRate)}%</p>
+          <p class="text-green-900 text-2xl font-bold">${Math.round(session.completionRate * 100)}%</p>
         </div>
       </div>
       <div class="mt-3 pt-3 border-t border-green-200">

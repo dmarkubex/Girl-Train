@@ -1,3 +1,5 @@
+[Guard] 2026-04-12 09:18 — FAIL | branch: master | spec: OK | task-graph: MISSING
+
 # Handoff — Build Mode v3 Complete
 
 Last Updated: 2026-04-12 00:15 GMT+8

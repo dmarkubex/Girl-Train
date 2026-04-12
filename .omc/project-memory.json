@@ -102,20 +102,32 @@
   "hotPaths": [
     {
       "path": "src/views/workout.ts",
-      "accessCount": 25,
-      "lastAccessed": 1775923717722,
+      "accessCount": 50,
+      "lastAccessed": 1775958730366,
       "type": "file"
     },
     {
       "path": "src/views/history.ts",
-      "accessCount": 22,
-      "lastAccessed": 1775923691132,
+      "accessCount": 43,
+      "lastAccessed": 1775958680225,
       "type": "file"
     },
     {
       "path": "src/timer/engine.ts",
+      "accessCount": 16,
+      "lastAccessed": 1775957819030,
+      "type": "file"
+    },
+    {
+      "path": "src/views/home.ts",
       "accessCount": 14,
-      "lastAccessed": 1775923684278,
+      "lastAccessed": 1775957809951,
+      "type": "file"
+    },
+    {
+      "path": "src/views/complete.ts",
+      "accessCount": 11,
+      "lastAccessed": 1775957127094,
       "type": "file"
     },
     {
@@ -125,27 +137,15 @@
       "type": "file"
     },
     {
-      "path": "src/views/complete.ts",
-      "accessCount": 10,
-      "lastAccessed": 1775923695318,
+      "path": "src/timer/snapshot.ts",
+      "accessCount": 9,
+      "lastAccessed": 1775957126920,
       "type": "file"
     },
     {
       "path": "src/main.ts",
       "accessCount": 8,
       "lastAccessed": 1775923567559,
-      "type": "file"
-    },
-    {
-      "path": "src/timer/snapshot.ts",
-      "accessCount": 8,
-      "lastAccessed": 1775923571219,
-      "type": "file"
-    },
-    {
-      "path": "src/views/home.ts",
-      "accessCount": 8,
-      "lastAccessed": 1775923685735,
       "type": "file"
     },
     {
@@ -167,15 +167,15 @@
       "type": "directory"
     },
     {
-      "path": "src/components/chart-wrapper.ts",
-      "accessCount": 5,
-      "lastAccessed": 1775923571806,
+      "path": "vite.config.ts",
+      "accessCount": 6,
+      "lastAccessed": 1775957127148,
       "type": "file"
     },
     {
-      "path": "vite.config.ts",
+      "path": "src/components/chart-wrapper.ts",
       "accessCount": 5,
-      "lastAccessed": 1775923587308,
+      "lastAccessed": 1775923571806,
       "type": "file"
     },
     {
@@ -183,6 +183,12 @@
       "accessCount": 5,
       "lastAccessed": 1775923595660,
       "type": "directory"
+    },
+    {
+      "path": "src/db.ts",
+      "accessCount": 5,
+      "lastAccessed": 1775958554993,
+      "type": "file"
     },
     {
       "path": "openspec/changes/scoliosis-exercise-tracker/tasks.md",
@@ -203,15 +209,15 @@
       "type": "file"
     },
     {
-      "path": "src/db.ts",
-      "accessCount": 4,
-      "lastAccessed": 1775923570897,
-      "type": "file"
-    },
-    {
       "path": "src/views/register.ts",
       "accessCount": 4,
       "lastAccessed": 1775923586986,
+      "type": "file"
+    },
+    {
+      "path": "public/manifest.json",
+      "accessCount": 4,
+      "lastAccessed": 1775957810692,
       "type": "file"
     },
     {
@@ -353,9 +359,9 @@
       "type": "file"
     },
     {
-      "path": "public/manifest.json",
+      "path": "progress.txt",
       "accessCount": 2,
-      "lastAccessed": 1775923598114,
+      "lastAccessed": 1775957977340,
       "type": "file"
     },
     {
