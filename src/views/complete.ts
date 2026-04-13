@@ -4,7 +4,7 @@
  */
 
 import { navigate } from '../router';
-import { getSessionByDate, saveSession } from '../db';
+import { getPreviousSession, saveSession } from '../db';
 import { getState } from '../state';
 import { createDoughnutChart, createBarChart, destroyChart } from '../components/chart-wrapper';
 import type { Session } from '../types';
@@ -217,12 +217,8 @@ async function createComparisonCard(session: Session): Promise<HTMLElement> {
   const card = document.createElement('div');
   card.className = 'bg-gray-50 rounded-xl p-4';
 
-  // Get previous session
-  const sessionDate = new Date(session.date);
-  const previousDate = new Date(sessionDate);
-  previousDate.setDate(previousDate.getDate() - 1);
-
-  const previousSession = await getSessionByDate(previousDate.toISOString().split('T')[0]);
+  // Get chronologically previous workout session (not "previous day")
+  const previousSession = await getPreviousSession(session.startTime, session.sessionId);
 
   if (!previousSession) {
     card.innerHTML = `

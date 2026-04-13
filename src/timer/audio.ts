@@ -154,3 +154,12 @@ export class AudioManager {
     this.initialized = false;
   }
 }
+
+let globalAudioManager: AudioManager | null = null;
+
+export function getGlobalAudioManager(): AudioManager {
+  if (!globalAudioManager) {
+    globalAudioManager = new AudioManager();
+  }
+  return globalAudioManager;
+}

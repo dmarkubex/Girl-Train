@@ -138,8 +138,7 @@ export class TimerEngine {
     this.releaseWakeLock();
 
     const session = this.buildSession('incomplete');
-    this.setState('completed');
-    this.events.onComplete(session);
+    this.state = 'completed';
     this.clearSnapshot();
 
     return session;
@@ -149,7 +148,6 @@ export class TimerEngine {
     this.cancelRaf();
     this.releaseWakeLock();
     document.removeEventListener('visibilitychange', this.visibilityHandler);
-    this.clearSnapshot();
   }
 
   getSession(): Partial<Session> {

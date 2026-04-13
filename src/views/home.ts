@@ -5,7 +5,7 @@
 
 import { getLatestSession, calculateStreak } from '../db';
 import { navigate } from '../router';
-import { AudioManager } from '../timer/audio';
+import { getGlobalAudioManager } from '../timer/audio';
 import { loadSnapshot } from '../timer/snapshot';
 import { setState } from '../state';
 import { getBusinessDate } from '../utils/date';
@@ -159,7 +159,7 @@ function formatDate(date: Date): string {
 
 async function handleStartWorkout(): Promise<void> {
   // Initialize audio manager (must be from user gesture)
-  const audioManager = new AudioManager();
+  const audioManager = getGlobalAudioManager();
   audioManager.init();
 
   // Check for existing snapshot

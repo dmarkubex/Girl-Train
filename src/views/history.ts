@@ -7,8 +7,65 @@ import { getSessionsByDateRange } from '../db';
 import { createLineChart, destroyChart } from '../components/chart-wrapper';
 import type { Session } from '../types';
 
+/**
+ * Calendar date string from a timestamp. Unlike getBusinessDate() (which maps
+ * late-night sessions to the previous day), this returns the wall-clock date so
+ * that sessions appear on the calendar day the user actually sees on the clock.
+ * session.date uses business-date; calendar display uses this function.
+ */
 function toLocalDateString(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-CA');
+  const date = new Date(ts);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function startOfDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function getWeekStart(date: Date): Date {
+  const start = startOfDay(date);
+  start.setDate(start.getDate() - start.getDay());
+  return start;
+}
+
+function buildDateRange(start: Date, days: number): Date[] {
+  const range: Date[] = [];
+  for (let i = 0; i < days; i++) {
+    range.push(addDays(start, i));
+  }
+  return range;
+}
+
+function buildCompletionRateMap(sessions: Session[]): Map<string, number> {
+  const completionRateMap = new Map<string, number>();
+  const sorted = [...sessions].sort((a, b) => a.startTime - b.startTime);
+
+  for (const session of sorted) {
+    // Keep latest completion rate when multiple sessions exist on one date.
+    completionRateMap.set(session.date, session.completionRate * 100);
+  }
+
+  return completionRateMap;
+}
+
+function getAverageCompletionForDates(dates: Date[], completionRateMap: Map<string, number>): number {
+  const total = dates.reduce((sum, date) => {
+    const dateKey = toLocalDateString(date.getTime());
+    return sum + (completionRateMap.get(dateKey) ?? 0);
+  }, 0);
+
+  return dates.length > 0 ? total / dates.length : 0;
 }
 
 let trendChart: any = null;
@@ -82,8 +139,10 @@ async function loadHistoryContent(_container: HTMLElement): Promise<void> {
 }
 
 async function renderWeekView(container: HTMLElement): Promise<void> {
-  const sessions = await getSessionsForWeek(currentDate);
-  const calendarData = generateWeekData(currentDate, sessions);
+  const weekSessions = await getSessionsForWeek(currentDate);
+  const comparisonSessions = await getSessionsForWeekComparison(currentDate);
+  const calendarData = generateWeekData(currentDate, weekSessions);
+  const weekDates = buildDateRange(getWeekStart(currentDate), 7);
 
   // Calendar section (simplified for week view - show 7 days)
   const calendarSection = document.createElement('div');
@@ -152,10 +211,10 @@ async function renderWeekView(container: HTMLElement): Promise<void> {
   calendarSection.appendChild(calendarGrid);
 
   // Trend chart
-  const trendSection = await createTrendSection(sessions, '7天趋势');
+  const trendSection = await createTrendSection(weekDates, weekSessions, '7天趋势');
 
   // Week comparison
-  const comparisonSection = await createWeekComparisonSection(sessions);
+  const comparisonSection = await createWeekComparisonSection(comparisonSessions, getWeekStart(currentDate));
 
   container.append(calendarSection, trendSection, comparisonSection);
 }
@@ -163,6 +222,13 @@ async function renderWeekView(container: HTMLElement): Promise<void> {
 async function renderMonthView(container: HTMLElement): Promise<void> {
   const sessions = await getSessionsForMonth(currentDate);
   const calendarData = generateMonthData(currentDate, sessions);
+  const trendEndDate = startOfDay(currentDate);
+  const trendStartDate = addDays(trendEndDate, -29);
+  const trendSessions = await getSessionsByDateRange(
+    toLocalDateString(trendStartDate.getTime()),
+    toLocalDateString(trendEndDate.getTime())
+  );
+  const trendDates = buildDateRange(trendStartDate, 30);
 
   // Calendar section
   const calendarSection = document.createElement('div');
@@ -236,7 +302,7 @@ async function renderMonthView(container: HTMLElement): Promise<void> {
   calendarSection.appendChild(calendarCard);
 
   // 30-day trend chart
-  const trendSection = await createTrendSection(sessions, '30天趋势');
+  const trendSection = await createTrendSection(trendDates, trendSessions, '30天趋势');
 
   container.append(calendarSection, trendSection);
 }
@@ -253,7 +319,7 @@ function getCellClass(day: DayData): string {
   }
 }
 
-async function createTrendSection(sessions: Session[], title: string): Promise<HTMLElement> {
+async function createTrendSection(dates: Date[], sessions: Session[], title: string): Promise<HTMLElement> {
   const section = document.createElement('div');
   section.className = 'px-5 mb-6';
 
@@ -273,11 +339,12 @@ async function createTrendSection(sessions: Session[], title: string): Promise<H
 
   // Initialize chart
   setTimeout(() => {
-    const labels = sessions.map(s => {
-      const date = new Date(s.date);
-      return `${date.getMonth() + 1}/${date.getDate()}`;
+    const completionRateMap = buildCompletionRateMap(sessions);
+    const labels = dates.map((date) => `${date.getMonth() + 1}/${date.getDate()}`);
+    const data = dates.map((date) => {
+      const dateKey = toLocalDateString(date.getTime());
+      return completionRateMap.get(dateKey) ?? 0;
     });
-    const data = sessions.map(s => s.completionRate * 100);
 
     destroyChart(trendChart);
     trendChart = createLineChart('trend-chart', labels, data);
@@ -286,7 +353,7 @@ async function createTrendSection(sessions: Session[], title: string): Promise<H
   return section;
 }
 
-async function createWeekComparisonSection(sessions: Session[]): Promise<HTMLElement> {
+async function createWeekComparisonSection(sessions: Session[], currentWeekStart: Date): Promise<HTMLElement> {
   const section = document.createElement('div');
   section.className = 'px-5 mb-6';
 
@@ -297,16 +364,12 @@ async function createWeekComparisonSection(sessions: Session[]): Promise<HTMLEle
   const card = document.createElement('div');
   card.className = 'bg-gray-50 rounded-2xl p-4';
 
-  // Calculate this week and last week averages
-  const thisWeekSessions = sessions.slice(-7);
-  const lastWeekSessions = sessions.slice(-14, -7);
-
-  const thisWeekAvg = thisWeekSessions.length > 0
-    ? thisWeekSessions.reduce((acc, s) => acc + s.completionRate, 0) / thisWeekSessions.length * 100
-    : 0;
-  const lastWeekAvg = lastWeekSessions.length > 0
-    ? lastWeekSessions.reduce((acc, s) => acc + s.completionRate, 0) / lastWeekSessions.length * 100
-    : 0;
+  // Calculate this week and last week averages against full 7-day windows.
+  const completionRateMap = buildCompletionRateMap(sessions);
+  const thisWeekDates = buildDateRange(currentWeekStart, 7);
+  const lastWeekDates = buildDateRange(addDays(currentWeekStart, -7), 7);
+  const thisWeekAvg = getAverageCompletionForDates(thisWeekDates, completionRateMap);
+  const lastWeekAvg = getAverageCompletionForDates(lastWeekDates, completionRateMap);
   const diff = thisWeekAvg - lastWeekAvg;
 
   card.innerHTML = `
@@ -394,16 +457,23 @@ function navigateMonth(direction: number): void {
 }
 
 async function getSessionsForWeek(date: Date): Promise<Session[]> {
-  const startOfWeek = new Date(date);
-  startOfWeek.setDate(date.getDate() - date.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const startOfWeek = getWeekStart(date);
+  const endOfWeek = addDays(startOfWeek, 6);
 
   return getSessionsByDateRange(
     toLocalDateString(startOfWeek.getTime()),
     toLocalDateString(endOfWeek.getTime())
+  );
+}
+
+async function getSessionsForWeekComparison(date: Date): Promise<Session[]> {
+  const currentWeekStart = getWeekStart(date);
+  const previousWeekStart = addDays(currentWeekStart, -7);
+  const currentWeekEnd = addDays(currentWeekStart, 6);
+
+  return getSessionsByDateRange(
+    toLocalDateString(previousWeekStart.getTime()),
+    toLocalDateString(currentWeekEnd.getTime())
   );
 }
 
@@ -483,10 +553,8 @@ function generateMonthData(date: Date, sessions: Session[]): CalendarData {
 }
 
 function getWeekRangeText(date: Date): string {
-  const startOfWeek = new Date(date);
-  startOfWeek.setDate(date.getDate() - date.getDay());
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  const startOfWeek = getWeekStart(date);
+  const endOfWeek = addDays(startOfWeek, 6);
 
   const format = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
   return `${format(startOfWeek)} - ${format(endOfWeek)}`;

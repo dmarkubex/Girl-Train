@@ -163,6 +163,37 @@ export async function getSessionByDate(date: string): Promise<Session | undefine
 }
 
 /**
+ * Get the most recent session before the current one.
+ * Uses IDB cursor to avoid loading all sessions into memory.
+ */
+export async function getPreviousSession(
+  currentStartTime: number,
+  currentSessionId?: string
+): Promise<Session | undefined> {
+  const db = await openDatabase();
+  const tx = db.transaction('sessions', 'readonly');
+  const store = tx.objectStore('sessions');
+
+  let best: Session | undefined;
+
+  let cursor = await store.openCursor();
+  while (cursor) {
+    const session = cursor.value;
+    if (
+      session.startTime < currentStartTime &&
+      (!currentSessionId || session.sessionId !== currentSessionId)
+    ) {
+      if (!best || session.startTime > best.startTime) {
+        best = session;
+      }
+    }
+    cursor = await cursor.continue();
+  }
+
+  return best;
+}
+
+/**
  * Export all data as JSON object.
  */
 export async function exportAllData(): Promise<{ config: AppConfig; sessions: Session[] }> {

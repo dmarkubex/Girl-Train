@@ -6,7 +6,7 @@
 import { getConfig, saveSession } from '../db';
 import { navigate } from '../router';
 import { TimerEngine, type TimerState, type TimerContext } from '../timer/engine';
-import { AudioManager } from '../timer/audio';
+import { type AudioManager, getGlobalAudioManager } from '../timer/audio';
 import { loadSnapshot, clearSnapshot, saveIncompleteAndClear, markSnapshotPaused, markSnapshotResumed, initializeSnapshotHooks, type WorkoutSnapshot } from '../timer/snapshot';
 import { setState, getState } from '../state';
 import { createTimerDisplay, updateTimerDisplay } from '../components/timer-display';
@@ -15,6 +15,8 @@ import { createProgressBar } from '../components/progress-bar';
 let timerEngine: TimerEngine | null = null;
 let audioManager: AudioManager | null = null;
 let currentState: TimerState = 'idle';
+let previousPhase: TimerContext['phase'] | null = null;
+let suppressNextPhaseSound = false;
 
 export function render(container: HTMLElement): void {
   // Set full-screen dark background
@@ -72,6 +74,8 @@ function showRecoveryDialog(container: HTMLElement, snapshot: WorkoutSnapshot, i
   continueButton.className = 'flex-1 py-3 bg-orange-500 text-white font-medium rounded-xl hover:bg-orange-600 transition-colors';
   continueButton.textContent = '继续';
   continueButton.addEventListener('click', () => {
+    // Ensure audio context is unlocked in user gesture path.
+    getGlobalAudioManager().init();
     overlay.remove();
     if (isFromState) {
       setState('pendingSnapshot', null);
@@ -180,9 +184,8 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
       return;
     }
 
-    // Initialize audio
-    audioManager = new AudioManager();
-    audioManager.init();
+    // Reuse globally unlocked audio context.
+    audioManager = getGlobalAudioManager();
 
     // Create timer engine with event handlers
     timerEngine = new TimerEngine({
@@ -190,6 +193,9 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
       onTick: handleTimerTick,
       onComplete: handleWorkoutComplete,
     });
+
+    previousPhase = null;
+    suppressNextPhaseSound = !!snapshot;
 
     // Wire snapshot hooks BEFORE starting — engine.saveSnapshot() is called inside start()/restoreFromSnapshot()
     initializeSnapshotHooks(timerEngine);
@@ -240,6 +246,7 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
 
 function handleTimerStateChange(state: TimerState, ctx: TimerContext): void {
   currentState = state;
+  playPhaseTransitionSound(state, ctx.phase);
 
   // Update phase badge
   updatePhaseBadge(ctx.phase);
@@ -266,6 +273,38 @@ function handleTimerStateChange(state: TimerState, ctx: TimerContext): void {
 
   // Update full display on state change (for new exercise, etc.)
   updateFullDisplay(ctx);
+}
+
+function playPhaseTransitionSound(state: TimerState, phase: TimerContext['phase']): void {
+  if (!audioManager) return;
+
+  const isActiveState = state === 'exercising' || state === 'resting' || state === 'project-rest';
+  if (!isActiveState) return;
+
+  if (suppressNextPhaseSound) {
+    suppressNextPhaseSound = false;
+    previousPhase = phase;
+    return;
+  }
+
+  if (previousPhase === null) {
+    if (phase === 'exercise') {
+      audioManager.playExerciseStart();
+    }
+    previousPhase = phase;
+    return;
+  }
+
+  if (phase !== previousPhase) {
+    if (previousPhase === 'exercise' && (phase === 'rest' || phase === 'project-rest')) {
+      audioManager.playExerciseComplete();
+    }
+    if (phase === 'exercise') {
+      audioManager.playExerciseStart();
+    }
+  }
+
+  previousPhase = phase;
 }
 
 function handleTimerTick(remainingMs: number): void {
@@ -375,30 +414,39 @@ async function handleEndWorkout(): Promise<void> {
   if (!confirmed) return;
 
   const session = timerEngine.endEarly();
-  cleanupWorkout();
+  cleanupWorkout({ clearSnapshot: true });
   await saveSession(session);
   setState('lastSession', session);
   navigate('complete');
 }
 
 async function handleWorkoutComplete(session: any): Promise<void> {
-  cleanupWorkout();
+  cleanupWorkout({ clearSnapshot: true });
   setState('lastSession', session);
   try {
     await saveSession(session);
   } catch (err) {
     console.error('Failed to save completed workout session:', err);
+    // Notify user — session data is still in state for the complete page,
+    // but won't appear in history unless the save succeeded.
+    try { alert('锻炼记录保存失败，请检查存储空间。'); } catch (_) { /* noop */ }
   }
   navigate('complete');
 }
 
-function cleanupWorkout(): void {
+function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
   if (timerEngine) {
     timerEngine.destroy();
     timerEngine = null;
   }
 
-  clearSnapshot();
+  if (options?.clearSnapshot) {
+    clearSnapshot();
+  }
+
+  currentState = 'idle';
+  previousPhase = null;
+  suppressNextPhaseSound = false;
 }
 
 export function cleanup(): void {
