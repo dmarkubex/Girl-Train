@@ -22,22 +22,58 @@ let workoutConfig: AppConfig | null = null;
 let announcedCountdownSeconds = new Set<number>();
 let announcedMilestones = new Set<string>();
 
-const ENCOURAGE_HALFWAY = [
-  '过半了，加油坚持！',
-  '已经完成一半，继续！',
-  '不错，保持这个节奏！',
-  '做得很好，加把劲！',
+// 24 varied encouragement phrases — energetic, witty, and motivating.
+// A shuffled queue ensures no phrase repeats until the entire pool is exhausted.
+const ENCOURAGEMENT_POOL = [
+  // 能量型
+  '收紧核心，冲！',
+  '专注发力，每一下都算数！',
+  '感受肌肉燃烧，这是变强的证明！',
+  '呼气发力，吸气还原，节奏稳住！',
+  // 鼓励型
+  '你比你想象的要强！',
+  '汗水不会说谎，努力都在积累！',
+  '身体在喊停，但意志力说不行！',
+  '坚持住，这把汗流得很值！',
+  '想想你开始的理由，继续！',
+  '以后的你，会感谢现在咬牙的你！',
+  // 幽默段子型
+  '教练说了，不能停！',
+  '别想太多，脑子一热冲就完了！',
+  '排出去的是借口，留下来的是实力！',
+  '这是送给自己的礼物，不收白不收！',
+  '现在多一滴汗，以后多一分自信！',
+  // 激励型
+  '每一下都在改变你的身体，继续！',
+  '不要和自己讲条件，动作到位！',
+  '就这几下，撑过去就是赢！',
+  '下一个休息就是奖励，冲过去！',
+  '全力以赴，漂亮地完成这组！',
+  // 状态型
+  '保持节奏，稳住！',
+  '专注呼吸，把注意力放在动作上！',
+  '姿势保持标准，继续！',
+  '节奏稳了，继续，撑住！',
 ];
 
-const ENCOURAGE_FINAL_STRETCH = [
-  '最后冲刺，快要完成了！',
-  '只剩最后一段，坚持！',
-  '太棒了，最后的努力！',
-  '快完成了，加油！',
-];
+let encouragementQueue: string[] = [];
+let encouragementIndex = 0;
 
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+function initEncouragementQueue(): void {
+  const pool = [...ENCOURAGEMENT_POOL];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  encouragementQueue = pool;
+  encouragementIndex = 0;
+}
+
+function nextEncouragement(): string {
+  if (encouragementIndex >= encouragementQueue.length) {
+    initEncouragementQueue();
+  }
+  return encouragementQueue[encouragementIndex++];
 }
 
 export function render(container: HTMLElement): void {
@@ -191,6 +227,7 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
     // Reuse globally unlocked audio context.
     audioManager = getGlobalAudioManager();
     workoutConfig = config;
+    initEncouragementQueue();
 
     // Create timer engine with event handlers
     timerEngine = new TimerEngine({
@@ -355,10 +392,10 @@ function handleTimerTick(remainingMs: number): void {
       const progress = (totalMs - remainingMs) / totalMs;
       if (progress >= 0.5 && !announcedMilestones.has('50')) {
         announcedMilestones.add('50');
-        audioManager.speak(pickRandom(ENCOURAGE_HALFWAY));
+        audioManager.speak(nextEncouragement());
       } else if (progress >= 0.75 && !announcedMilestones.has('75')) {
         announcedMilestones.add('75');
-        audioManager.speak(pickRandom(ENCOURAGE_FINAL_STRETCH));
+        audioManager.speak(nextEncouragement());
       }
     }
   }
@@ -587,6 +624,8 @@ function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
   workoutConfig = null;
   announcedCountdownSeconds = new Set<number>();
   announcedMilestones = new Set<string>();
+  encouragementQueue = [];
+  encouragementIndex = 0;
 }
 
 export function cleanup(): void {
