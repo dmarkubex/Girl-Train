@@ -5,14 +5,9 @@
 
 import { getSessionsByDateRange } from '../db';
 import { createLineChart, destroyChart } from '../components/chart-wrapper';
+import { createBottomNav } from '../components/bottom-nav';
 import type { Session } from '../types';
 
-/**
- * Calendar date string from a timestamp. Unlike getBusinessDate() (which maps
- * late-night sessions to the previous day), this returns the wall-clock date so
- * that sessions appear on the calendar day the user actually sees on the clock.
- * session.date uses business-date; calendar display uses this function.
- */
 function toLocalDateString(ts: number): string {
   const date = new Date(ts);
   const year = date.getFullYear();
@@ -52,7 +47,6 @@ function buildCompletionRateMap(sessions: Session[]): Map<string, number> {
   const sorted = [...sessions].sort((a, b) => a.startTime - b.startTime);
 
   for (const session of sorted) {
-    // Keep latest completion rate when multiple sessions exist on one date.
     completionRateMap.set(session.date, session.completionRate * 100);
   }
 
@@ -74,36 +68,38 @@ let currentDate: Date = new Date();
 
 export async function render(container: HTMLElement): Promise<void> {
   const page = document.createElement('div');
-  page.className = 'page history-page bg-white min-h-screen flex flex-col';
+  page.className = 'app-page history-page';
 
   // Header
   const header = document.createElement('header');
-  header.className = 'px-5 pt-6 pb-4 border-b border-gray-100';
+  header.className = 'page-header';
 
   const title = document.createElement('h1');
-  title.className = 'text-2xl font-bold text-gray-900';
+  title.className = 'page-title';
   title.textContent = '历史记录';
 
   const subtitle = document.createElement('p');
-  subtitle.className = 'text-gray-500 text-sm mt-1';
-  subtitle.textContent = '查看你的锻炼趋势';
+  subtitle.className = 'page-subtitle';
+  subtitle.textContent = '追溯时光，每一步算数';
 
   header.append(title, subtitle);
 
   // View Toggle
   const toggleSection = document.createElement('div');
-  toggleSection.className = 'px-5 py-4';
+  toggleSection.className = 'toggle-panel';
 
   const toggleContainer = document.createElement('div');
-  toggleContainer.className = 'flex bg-gray-100 rounded-xl p-1';
+  toggleContainer.className = 'toggle-container';
 
   const weekButton = document.createElement('button');
-  weekButton.className = 'flex-1 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg';
+  weekButton.className = 'toggle-btn active';
+  weekButton.id = 'toggle-week';
   weekButton.textContent = '周视图';
   weekButton.addEventListener('click', () => switchView('week'));
 
   const monthButton = document.createElement('button');
-  monthButton.className = 'flex-1 py-2 text-sm font-medium text-gray-600';
+  monthButton.className = 'toggle-btn';
+  monthButton.id = 'toggle-month';
   monthButton.textContent = '月视图';
   monthButton.addEventListener('click', () => switchView('month'));
 
@@ -117,9 +113,11 @@ export async function render(container: HTMLElement): Promise<void> {
   contentContainer.id = 'history-content';
   page.appendChild(contentContainer);
 
+  const nav = createBottomNav('history');
+  page.appendChild(nav);
+
   container.appendChild(page);
 
-  // Load initial content
   await loadHistoryContent(container);
 }
 
@@ -144,79 +142,59 @@ async function renderWeekView(container: HTMLElement): Promise<void> {
   const calendarData = generateWeekData(currentDate, weekSessions);
   const weekDates = buildDateRange(getWeekStart(currentDate), 7);
 
-  // Calendar section (simplified for week view - show 7 days)
-  const calendarSection = document.createElement('div');
-  calendarSection.className = 'px-5 mb-6';
+  // Calendar section
+  const calendarCard = document.createElement('div');
+  calendarCard.className = 'dark-card';
 
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-  const calendarGrid = document.createElement('div');
-  calendarGrid.className = 'bg-gray-50 rounded-2xl p-4';
-
-  // Week header
   const weekHeader = document.createElement('div');
-  weekHeader.className = 'flex items-center justify-between mb-4';
+  weekHeader.className = 'calendar-header';
 
   const prevButton = document.createElement('button');
-  prevButton.className = 'p-2 -ml-2 text-gray-400 hover:text-gray-600';
-  prevButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>';
+  prevButton.className = 'cal-nav-btn';
+  prevButton.innerHTML = '<svg class="icon-24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>';
   prevButton.addEventListener('click', () => navigateWeek(-1));
 
-  const monthLabel = document.createElement('h3');
-  monthLabel.className = 'font-semibold text-gray-900';
+  const monthLabel = document.createElement('div');
+  monthLabel.className = 'cal-month-label';
   monthLabel.textContent = getWeekRangeText(currentDate);
 
   const nextButton = document.createElement('button');
-  nextButton.className = 'p-2 -mr-2 text-gray-400 hover:text-gray-600';
-  nextButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+  nextButton.className = 'cal-nav-btn';
+  nextButton.innerHTML = '<svg class="icon-24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
   nextButton.addEventListener('click', () => navigateWeek(1));
 
   weekHeader.append(prevButton, monthLabel, nextButton);
 
-  // Weekday headers
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
   const weekdayRow = document.createElement('div');
-  weekdayRow.className = 'grid grid-cols-7 gap-1 mb-2';
+  weekdayRow.className = 'calendar-weekdays';
   weekDays.forEach(day => {
     const dayHeader = document.createElement('div');
-    dayHeader.className = 'text-center text-xs text-gray-400 py-1';
+    dayHeader.className = 'weekday-header';
     dayHeader.textContent = day;
     weekdayRow.appendChild(dayHeader);
   });
 
-  // Calendar grid
   const gridRow = document.createElement('div');
-  gridRow.className = 'grid grid-cols-7 gap-1';
+  gridRow.className = 'calendar-grid';
 
   calendarData.days.forEach(day => {
     const dayCell = document.createElement('div');
-    dayCell.className = `aspect-square flex items-center justify-center text-sm rounded-lg cursor-pointer transition-colors ${getCellClass(day)}`;
+    dayCell.className = `cal-day-cell active-month ${getCellClass(day)}`;
     dayCell.textContent = day.date.getDate().toString();
 
     if (day.session) {
       dayCell.addEventListener('click', () => showSessionDetail(day.session!));
     }
-
     gridRow.appendChild(dayCell);
   });
 
-  // Legend
-  const legend = document.createElement('div');
-  legend.className = 'flex justify-center gap-4 mt-4 text-xs text-gray-500';
-  legend.innerHTML = `
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-green-500 rounded"></div><span>完成</span></div>
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-yellow-400 rounded"></div><span>部分</span></div>
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-gray-200 rounded"></div><span>未锻炼</span></div>
-  `;
+  calendarCard.append(weekHeader, weekdayRow, gridRow);
 
-  calendarGrid.append(weekHeader, weekdayRow, gridRow, legend);
-  calendarSection.appendChild(calendarGrid);
-
-  // Trend chart
   const trendSection = await createTrendSection(weekDates, weekSessions, '7天趋势');
-
-  // Week comparison
   const comparisonSection = await createWeekComparisonSection(comparisonSessions, getWeekStart(currentDate));
 
-  container.append(calendarSection, trendSection, comparisonSection);
+  container.append(calendarCard, trendSection, comparisonSection);
 }
 
 async function renderMonthView(container: HTMLElement): Promise<void> {
@@ -230,54 +208,49 @@ async function renderMonthView(container: HTMLElement): Promise<void> {
   );
   const trendDates = buildDateRange(trendStartDate, 30);
 
-  // Calendar section
-  const calendarSection = document.createElement('div');
-  calendarSection.className = 'px-5 mb-6';
-
   const calendarCard = document.createElement('div');
-  calendarCard.className = 'bg-gray-50 rounded-2xl p-4';
+  calendarCard.className = 'dark-card';
 
-  // Month navigation
   const monthHeader = document.createElement('div');
-  monthHeader.className = 'flex items-center justify-between mb-4';
+  monthHeader.className = 'calendar-header';
 
   const prevButton = document.createElement('button');
-  prevButton.className = 'p-2 -ml-2 text-gray-400 hover:text-gray-600';
-  prevButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>';
+  prevButton.className = 'cal-nav-btn';
+  prevButton.innerHTML = '<svg class="icon-24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>';
   prevButton.addEventListener('click', () => navigateMonth(-1));
 
-  const monthLabel = document.createElement('h3');
-  monthLabel.className = 'font-semibold text-gray-900';
+  const monthLabel = document.createElement('div');
+  monthLabel.className = 'cal-month-label';
   monthLabel.textContent = getMonthText(currentDate);
 
   const nextButton = document.createElement('button');
-  nextButton.className = 'p-2 -mr-2 text-gray-400 hover:text-gray-600';
-  nextButton.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+  nextButton.className = 'cal-nav-btn';
+  nextButton.innerHTML = '<svg class="icon-24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
   nextButton.addEventListener('click', () => navigateMonth(1));
 
   monthHeader.append(prevButton, monthLabel, nextButton);
 
-  // Weekday headers
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
   const weekdayRow = document.createElement('div');
-  weekdayRow.className = 'grid grid-cols-7 gap-1 mb-2';
+  weekdayRow.className = 'calendar-weekdays';
   weekDays.forEach(day => {
     const dayHeader = document.createElement('div');
-    dayHeader.className = 'text-center text-xs text-gray-400 py-1';
+    dayHeader.className = 'weekday-header';
     dayHeader.textContent = day;
     weekdayRow.appendChild(dayHeader);
   });
 
-  // Calendar grid
   const calendarGrid = document.createElement('div');
-  calendarGrid.className = 'grid grid-cols-7 gap-1';
+  calendarGrid.className = 'calendar-grid';
 
   calendarData.weeks.forEach(week => {
     week.forEach(day => {
       const dayCell = document.createElement('div');
-      dayCell.className = `aspect-square flex items-center justify-center text-sm rounded-lg cursor-pointer transition-colors ${getCellClass(day)}`;
-
-      if (day.date.getMonth() === currentDate.getMonth()) {
+      
+      const isActiveMonth = day.date.getMonth() === currentDate.getMonth();
+      dayCell.className = `cal-day-cell ${isActiveMonth ? 'active-month' : ''} ${getCellClass(day)}`;
+      
+      if (isActiveMonth) {
         dayCell.textContent = day.date.getDate().toString();
       }
 
@@ -289,55 +262,41 @@ async function renderMonthView(container: HTMLElement): Promise<void> {
     });
   });
 
-  // Legend
-  const legend = document.createElement('div');
-  legend.className = 'flex justify-center gap-4 mt-4 text-xs text-gray-500';
-  legend.innerHTML = `
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-green-500 rounded"></div><span>完成</span></div>
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-yellow-400 rounded"></div><span>部分</span></div>
-    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-gray-200 rounded"></div><span>未锻炼</span></div>
-  `;
+  calendarCard.append(monthHeader, weekdayRow, calendarGrid);
 
-  calendarCard.append(monthHeader, weekdayRow, calendarGrid, legend);
-  calendarSection.appendChild(calendarCard);
-
-  // 30-day trend chart
   const trendSection = await createTrendSection(trendDates, trendSessions, '30天趋势');
-
-  container.append(calendarSection, trendSection);
+  container.append(calendarCard, trendSection);
 }
 
 function getCellClass(day: DayData): string {
-  if (!day.session) {
-    return 'text-gray-400';
-  }
-
-  if (day.session.completionRate >= 0.8) {
-    return 'bg-green-500 text-white font-medium';
-  } else {
-    return 'bg-yellow-400 text-white font-medium';
-  }
+  if (!day.session) return '';
+  if (day.session.completionRate >= 0.8) return 'status-green';
+  return 'status-yellow';
 }
 
 async function createTrendSection(dates: Date[], sessions: Session[], title: string): Promise<HTMLElement> {
-  const section = document.createElement('div');
-  section.className = 'px-5 mb-6';
+  const chartCard = document.createElement('div');
+  chartCard.className = 'dark-card';
+  chartCard.style.padding = '12px var(--spacing-lg) 20px';
 
   const sectionTitle = document.createElement('h2');
-  sectionTitle.className = 'text-gray-900 font-semibold mb-3';
+  sectionTitle.style.fontSize = '14px';
+  sectionTitle.style.color = 'rgba(255,255,255,0.6)';
+  sectionTitle.style.marginBottom = '12px';
+  sectionTitle.style.textTransform = 'uppercase';
   sectionTitle.textContent = title;
 
-  const chartCard = document.createElement('div');
-  chartCard.className = 'bg-gray-50 rounded-2xl p-4';
+  const canvasContainer = document.createElement('div');
+  canvasContainer.style.background = 'transparent';
+  canvasContainer.style.filter = 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))';
 
   const canvas = document.createElement('canvas');
   canvas.id = 'trend-chart';
-  canvas.height = 160;
+  canvas.height = 140;
 
-  chartCard.appendChild(canvas);
-  section.append(sectionTitle, chartCard);
+  canvasContainer.appendChild(canvas);
+  chartCard.append(sectionTitle, canvasContainer);
 
-  // Initialize chart
   setTimeout(() => {
     const completionRateMap = buildCompletionRateMap(sessions);
     const labels = dates.map((date) => `${date.getMonth() + 1}/${date.getDate()}`);
@@ -350,21 +309,13 @@ async function createTrendSection(dates: Date[], sessions: Session[], title: str
     trendChart = createLineChart('trend-chart', labels, data);
   }, 100);
 
-  return section;
+  return chartCard;
 }
 
 async function createWeekComparisonSection(sessions: Session[], currentWeekStart: Date): Promise<HTMLElement> {
-  const section = document.createElement('div');
-  section.className = 'px-5 mb-6';
-
-  const sectionTitle = document.createElement('h2');
-  sectionTitle.className = 'text-gray-900 font-semibold mb-3';
-  sectionTitle.textContent = '周平均对比';
-
   const card = document.createElement('div');
-  card.className = 'bg-gray-50 rounded-2xl p-4';
+  card.className = 'dark-card stats-grid';
 
-  // Calculate this week and last week averages against full 7-day windows.
   const completionRateMap = buildCompletionRateMap(sessions);
   const thisWeekDates = buildDateRange(currentWeekStart, 7);
   const lastWeekDates = buildDateRange(addDays(currentWeekStart, -7), 7);
@@ -373,38 +324,30 @@ async function createWeekComparisonSection(sessions: Session[], currentWeekStart
   const diff = thisWeekAvg - lastWeekAvg;
 
   card.innerHTML = `
-    <div class="flex items-center justify-between">
-      <div class="flex-1">
-        <p class="text-gray-500 text-sm">本周平均</p>
-        <p class="text-green-600 text-2xl font-bold mt-1">${Math.round(thisWeekAvg)}%</p>
+      <div class="stat-item">
+        <p class="stat-label">本周平均</p>
+        <p class="stat-value" style="color: #4CAF50;">${Math.round(thisWeekAvg)}%</p>
       </div>
-      <div class="w-px h-12 bg-gray-300"></div>
-      <div class="flex-1 text-center">
-        <p class="text-gray-500 text-sm">上周</p>
-        <p class="text-gray-600 text-2xl font-bold mt-1">${Math.round(lastWeekAvg)}%</p>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <p class="stat-label">上周平均</p>
+        <p class="stat-value" style="color: rgba(255,255,255,0.8);">${Math.round(lastWeekAvg)}%</p>
       </div>
-      <div class="w-px h-12 bg-gray-300"></div>
-      <div class="flex-1 text-right">
-        <p class="text-gray-500 text-sm">变化</p>
-        <p class="${diff >= 0 ? 'text-green-600' : 'text-red-500'} text-lg font-semibold flex items-center justify-end mt-1">
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <p class="stat-label">增长度</p>
+        <p class="stat-value" style="color: ${diff >= 0 ? '#4CAF50' : '#EF4444'};">
           ${diff >= 0 ? '+' : ''}${Math.round(diff)}%
-          <svg class="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24">
-            <path d="${diff >= 0 ? 'M7 14l5-5 5 5z' : 'M7 10l5 5 5-5z'}"/>
-          </svg>
         </p>
       </div>
-    </div>
   `;
 
-  section.append(sectionTitle, card);
-  return section;
+  return card;
 }
 
 function showSessionDetail(session: Session): void {
-  // Show a simple alert for now - could be enhanced to a modal
   const date = new Date(session.date);
   const dateStr = `${date.getMonth() + 1}月${date.getDate()}日`;
-
   alert(`
 ${dateStr} 锻炼详情
 完成率: ${Math.round(session.completionRate * 100)}%
@@ -416,21 +359,16 @@ ${dateStr} 锻炼详情
 
 function switchView(view: 'week' | 'month'): void {
   currentView = view;
-
-  // Update toggle buttons
-  const page = document.querySelector('.history-page');
-  if (!page) return;
-
-  const weekButton = page.querySelector('.px-5.py-4 button:first-child') as HTMLButtonElement;
-  const monthButton = page.querySelector('.px-5.py-4 button:last-child') as HTMLButtonElement;
-
-  if (weekButton && monthButton) {
+  const toggleWeek = document.getElementById('toggle-week');
+  const toggleMonth = document.getElementById('toggle-month');
+  
+  if (toggleWeek && toggleMonth) {
     if (view === 'week') {
-      weekButton.className = 'flex-1 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg';
-      monthButton.className = 'flex-1 py-2 text-sm font-medium text-gray-600';
+      toggleWeek.className = 'toggle-btn active';
+      toggleMonth.className = 'toggle-btn';
     } else {
-      weekButton.className = 'flex-1 py-2 text-sm font-medium text-gray-600';
-      monthButton.className = 'flex-1 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg';
+      toggleWeek.className = 'toggle-btn';
+      toggleMonth.className = 'toggle-btn active';
     }
   }
 
@@ -459,32 +397,20 @@ function navigateMonth(direction: number): void {
 async function getSessionsForWeek(date: Date): Promise<Session[]> {
   const startOfWeek = getWeekStart(date);
   const endOfWeek = addDays(startOfWeek, 6);
-
-  return getSessionsByDateRange(
-    toLocalDateString(startOfWeek.getTime()),
-    toLocalDateString(endOfWeek.getTime())
-  );
+  return getSessionsByDateRange(toLocalDateString(startOfWeek.getTime()), toLocalDateString(endOfWeek.getTime()));
 }
 
 async function getSessionsForWeekComparison(date: Date): Promise<Session[]> {
   const currentWeekStart = getWeekStart(date);
   const previousWeekStart = addDays(currentWeekStart, -7);
   const currentWeekEnd = addDays(currentWeekStart, 6);
-
-  return getSessionsByDateRange(
-    toLocalDateString(previousWeekStart.getTime()),
-    toLocalDateString(currentWeekEnd.getTime())
-  );
+  return getSessionsByDateRange(toLocalDateString(previousWeekStart.getTime()), toLocalDateString(currentWeekEnd.getTime()));
 }
 
 async function getSessionsForMonth(date: Date): Promise<Session[]> {
   const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
   const lastDayOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
-  return getSessionsByDateRange(
-    toLocalDateString(startOfMonth.getTime()),
-    toLocalDateString(lastDayOfMonth.getTime())
-  );
+  return getSessionsByDateRange(toLocalDateString(startOfMonth.getTime()), toLocalDateString(lastDayOfMonth.getTime()));
 }
 
 function generateWeekData(date: Date, sessions: Session[]): CalendarData {
@@ -498,11 +424,7 @@ function generateWeekData(date: Date, sessions: Session[]): CalendarData {
     const dayDate = new Date(startOfWeek);
     dayDate.setDate(startOfWeek.getDate() + i);
     const dateStr = toLocalDateString(dayDate.getTime());
-
-    days.push({
-      date: dayDate,
-      session: sessionsMap.get(dateStr) || null,
-    });
+    days.push({ date: dayDate, session: sessionsMap.get(dateStr) || null });
   }
 
   return { days, weeks: [] };
@@ -519,28 +441,20 @@ function generateMonthData(date: Date, sessions: Session[]): CalendarData {
   const weeks: DayData[][] = [];
   let currentWeek: DayData[] = [];
 
-  // Add padding for first week
   for (let i = 0; i < startDayOfWeek; i++) {
     currentWeek.push({ date: new Date(year, month, 1 - (startDayOfWeek - i)), session: null });
   }
 
-  // Add actual days
   for (let day = 1; day <= lastDay.getDate(); day++) {
     const dayDate = new Date(year, month, day);
     const dateStr = toLocalDateString(dayDate.getTime());
-
-    currentWeek.push({
-      date: dayDate,
-      session: sessionsMap.get(dateStr) || null,
-    });
-
+    currentWeek.push({ date: dayDate, session: sessionsMap.get(dateStr) || null });
     if (currentWeek.length === 7) {
       weeks.push(currentWeek);
       currentWeek = [];
     }
   }
 
-  // Add remaining days for last week
   if (currentWeek.length > 0) {
     while (currentWeek.length < 7) {
       const nextDay = lastDay.getDate() + (7 - currentWeek.length) + 1;
@@ -555,7 +469,6 @@ function generateMonthData(date: Date, sessions: Session[]): CalendarData {
 function getWeekRangeText(date: Date): string {
   const startOfWeek = getWeekStart(date);
   const endOfWeek = addDays(startOfWeek, 6);
-
   const format = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日`;
   return `${format(startOfWeek)} - ${format(endOfWeek)}`;
 }
@@ -566,19 +479,12 @@ function getMonthText(date: Date): string {
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const secs = Math.floor(seconds % 60);
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
-interface DayData {
-  date: Date;
-  session: Session | null;
-}
-
-interface CalendarData {
-  days: DayData[];
-  weeks: DayData[][];
-}
+interface DayData { date: Date; session: Session | null; }
+interface CalendarData { days: DayData[]; weeks: DayData[][]; }
 
 export function cleanup(): void {
   destroyChart(trendChart);

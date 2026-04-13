@@ -25,69 +25,82 @@ export async function render(container: HTMLElement): Promise<void> {
 
   // Create page structure
   const page = document.createElement('div');
-  page.className = 'page complete-page bg-white min-h-screen';
+  page.className = 'app-page complete-page';
 
   // Header
   const header = document.createElement('header');
-  header.className = 'px-5 pt-6 pb-4 border-b border-gray-100';
-
-  const headerContent = document.createElement('div');
-  headerContent.className = 'flex items-center justify-between';
+  header.className = 'page-header text-center';
+  header.style.textAlign = 'center';
 
   const title = document.createElement('h1');
-  title.className = 'text-2xl font-bold text-gray-900';
-  title.textContent = '锻炼完成！';
-
-  const emoji = document.createElement('span');
-  emoji.className = 'text-4xl';
-  emoji.textContent = '🎉';
+  title.className = 'page-title';
+  title.style.fontSize = '32px';
+  title.innerHTML = '锻炼完成！<span style="font-size: 28px;">🎉</span>';
 
   const dateDisplay = document.createElement('p');
-  dateDisplay.className = 'text-gray-500 mt-1';
+  dateDisplay.className = 'page-subtitle';
   dateDisplay.textContent = formatSessionDate(session);
 
-  headerContent.append(title, emoji);
-  header.append(headerContent, dateDisplay);
+  header.append(title, dateDisplay);
 
   // Completion Rate Doughnut Chart
   const chartSection = document.createElement('div');
-  chartSection.className = 'px-5 py-6';
+  chartSection.style.paddingTop = '16px';
 
   const chartCard = document.createElement('div');
-  chartCard.className = 'bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 text-center';
+  chartCard.className = 'dark-card';
+  chartCard.style.textAlign = 'center';
+  chartCard.style.display = 'flex';
+  chartCard.style.flexDirection = 'column';
+  chartCard.style.alignItems = 'center';
 
   const chartLabel = document.createElement('p');
-  chartLabel.className = 'text-green-800 text-sm font-medium mb-4';
-  chartLabel.textContent = '本次完成率';
+  chartLabel.style.color = 'var(--color-primary)';
+  chartLabel.style.fontWeight = 'bold';
+  chartLabel.style.marginBottom = '16px';
+  chartLabel.textContent = '本次完成度';
 
   const chartContainer = document.createElement('div');
-  chartContainer.className = 'relative w-40 h-40 mx-auto';
+  chartContainer.style.position = 'relative';
+  chartContainer.style.width = '180px';
+  chartContainer.style.height = '180px';
+  chartContainer.style.margin = '0 auto';
 
   const canvas = document.createElement('canvas');
   canvas.id = 'completion-chart';
-  canvas.width = 160;
-  canvas.height = 160;
+  canvas.width = 180;
+  canvas.height = 180;
 
   const centerText = document.createElement('div');
-  centerText.className = 'absolute inset-0 flex items-center justify-center';
+  centerText.style.position = 'absolute';
+  centerText.style.inset = '0';
+  centerText.style.display = 'flex';
+  centerText.style.alignItems = 'center';
+  centerText.style.justifyContent = 'center';
 
   const percentage = document.createElement('span');
-  percentage.className = 'text-5xl font-bold text-green-600';
+  percentage.style.fontSize = '48px';
+  percentage.style.fontWeight = '800';
+  percentage.style.color = '#fff';
+  percentage.style.textShadow = '0 0 10px rgba(255,107,53,0.5)';
   percentage.textContent = `${Math.round(session.completionRate * 100)}%`;
 
   centerText.appendChild(percentage);
   chartContainer.append(canvas, centerText);
 
   const chartMessage = document.createElement('p');
-  chartMessage.className = 'text-green-700 mt-4 text-sm';
-  chartMessage.textContent = session.completionRate >= 1 ? '太棒了！全部完成' : '继续加油！';
+  chartMessage.style.color = 'rgba(255,255,255,0.7)';
+  chartMessage.style.marginTop = '16px';
+  chartMessage.style.fontSize = '14px';
+  chartMessage.textContent = session.completionRate >= 1 ? '太棒了！你的自律令人惊叹！' : '坚持就是胜利，明天继续加油！';
 
   chartCard.append(chartLabel, chartContainer, chartMessage);
   chartSection.appendChild(chartCard);
 
   // Key Metrics
   const metricsSection = document.createElement('div');
-  metricsSection.className = 'px-5 grid grid-cols-3 gap-3 mb-6';
+  metricsSection.className = 'dark-card stats-grid';
+  metricsSection.style.padding = '20px';
 
   const totalDuration = session.exercises.reduce((acc, ex) =>
     acc + ex.sets.reduce((setAcc, set) => setAcc + (set.skipped ? 0 : set.actualDuration), 0), 0
@@ -98,68 +111,96 @@ export async function render(container: HTMLElement): Promise<void> {
   const skippedSets = session.exercises.reduce((acc, ex) =>
     acc + ex.sets.filter(s => s.skipped).length, 0
   );
-
   const totalSetsPlanned = session.exercises.reduce((acc, ex) => acc + ex.plannedSets, 0);
 
   metricsSection.innerHTML = `
-    <div class="bg-gray-50 rounded-xl p-3 text-center">
-      <p class="text-gray-500 text-xs">总用时</p>
-      <p class="timer text-xl font-bold text-gray-900 mt-1">${formatDuration(totalDuration / 1000)}</p>
+    <div class="stat-item">
+      <p class="stat-label">总用时</p>
+      <p class="stat-value" style="color: #fff;">${formatDuration(totalDuration / 1000)}</p>
     </div>
-    <div class="bg-gray-50 rounded-xl p-3 text-center">
-      <p class="text-gray-500 text-xs">完成组数</p>
-      <p class="timer text-xl font-bold text-gray-900 mt-1">${completedSets}/${totalSetsPlanned}</p>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <p class="stat-label">完成组数</p>
+      <p class="stat-value" style="color: #4CAF50;">${completedSets}/${totalSetsPlanned}</p>
     </div>
-    <div class="bg-gray-50 rounded-xl p-3 text-center">
-      <p class="text-gray-500 text-xs">跳过组数</p>
-      <p class="timer text-xl font-bold text-gray-900 mt-1">${skippedSets}</p>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <p class="stat-label">跳过组数</p>
+      <p class="stat-value" style="color: ${skippedSets > 0 ? '#EF4444' : '#fff'};">${skippedSets}</p>
     </div>
   `;
 
   // Per-Exercise Bar Chart
-  const exerciseSection = document.createElement('div');
-  exerciseSection.className = 'px-5 mb-6';
-
+  const exerciseContainer = document.createElement('div');
+  exerciseContainer.style.padding = '0 var(--spacing-lg)';
   const exerciseTitle = document.createElement('h2');
-  exerciseTitle.className = 'text-gray-900 font-semibold mb-3';
+  exerciseTitle.style.fontSize = '14px';
+  exerciseTitle.style.color = 'rgba(255,255,255,0.6)';
+  exerciseTitle.style.marginBottom = '12px';
+  exerciseTitle.style.textTransform = 'uppercase';
   exerciseTitle.textContent = '各项目完成情况';
-
+  
   const exerciseCard = document.createElement('div');
-  exerciseCard.className = 'bg-gray-50 rounded-xl p-4';
+  exerciseCard.className = 'dark-card';
+  exerciseCard.style.margin = '0 0 var(--spacing-lg) 0';
+  exerciseCard.style.padding = '12px var(--spacing-md)';
 
   const exerciseCanvas = document.createElement('canvas');
   exerciseCanvas.id = 'exercise-chart';
-  exerciseCanvas.height = 200;
+  exerciseCanvas.height = 140;
 
   exerciseCard.appendChild(exerciseCanvas);
-  exerciseSection.append(exerciseTitle, exerciseCard);
+  exerciseContainer.append(exerciseTitle, exerciseCard);
 
   // Comparison with Last Session
-  const comparisonSection = document.createElement('div');
-  comparisonSection.className = 'px-5 mb-6';
-
+  const comparisonContainer = document.createElement('div');
+  comparisonContainer.style.padding = '0 var(--spacing-lg)';
   const comparisonTitle = document.createElement('h2');
-  comparisonTitle.className = 'text-gray-900 font-semibold mb-3';
+  comparisonTitle.style.fontSize = '14px';
+  comparisonTitle.style.color = 'rgba(255,255,255,0.6)';
+  comparisonTitle.style.marginBottom = '12px';
+  comparisonTitle.style.textTransform = 'uppercase';
   comparisonTitle.textContent = '与上次对比';
 
+  const comparisonCardWrapper = document.createElement('div');
+  comparisonCardWrapper.style.margin = '0 0 var(--spacing-lg) 0';
   const comparisonCard = await createComparisonCard(session);
-  comparisonSection.append(comparisonTitle, comparisonCard);
+  comparisonCardWrapper.appendChild(comparisonCard);
+
+  comparisonContainer.append(comparisonTitle, comparisonCardWrapper);
 
   // Notes Input
-  const notesSection = document.createElement('div');
-  notesSection.className = 'px-5 mb-6';
-
+  const notesContainer = document.createElement('div');
+  notesContainer.style.padding = '0 var(--spacing-lg)';
   const notesTitle = document.createElement('h2');
-  notesTitle.className = 'text-gray-900 font-semibold mb-3';
+  notesTitle.style.fontSize = '14px';
+  notesTitle.style.color = 'rgba(255,255,255,0.6)';
+  notesTitle.style.marginBottom = '12px';
   notesTitle.textContent = '备注（可选）';
 
+  const notesCard = document.createElement('div');
+  notesCard.className = 'dark-card';
+  notesCard.style.margin = '0 0 var(--spacing-lg) 0';
+  notesCard.style.padding = 'var(--spacing-md)';
+
   const textarea = document.createElement('textarea');
-  textarea.className = 'w-full h-24 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent';
-  textarea.placeholder = '记录今天的感受...';
+  textarea.style.width = '100%';
+  textarea.style.height = '80px';
+  textarea.style.background = 'rgba(0,0,0,0.3)';
+  textarea.style.border = '1px solid rgba(255,255,255,0.1)';
+  textarea.style.color = '#fff';
+  textarea.style.padding = '12px';
+  textarea.style.borderRadius = '8px';
+  textarea.style.fontSize = '14px';
+  textarea.style.resize = 'none';
+  textarea.style.outline = 'none';
+  textarea.placeholder = '记录今天的状态和感受...';
   textarea.value = session.note || '';
 
   const saveNoteButton = document.createElement('button');
-  saveNoteButton.className = 'mt-2 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors';
+  saveNoteButton.className = 'btn-secondary';
+  saveNoteButton.style.marginTop = '12px';
+  saveNoteButton.style.padding = '10px';
   saveNoteButton.textContent = '保存备注';
   saveNoteButton.addEventListener('click', async () => {
     if (currentSession) {
@@ -172,20 +213,22 @@ export async function render(container: HTMLElement): Promise<void> {
     }
   });
 
-  notesSection.append(notesTitle, textarea, saveNoteButton);
+  notesCard.append(textarea, saveNoteButton);
+  notesContainer.append(notesTitle, notesCard);
 
   // Action Button
   const actionSection = document.createElement('div');
-  actionSection.className = 'px-5 pb-12';
+  actionSection.className = 'save-btn-container';
+  actionSection.style.marginTop = '20px';
 
   const homeButton = document.createElement('button');
-  homeButton.className = 'w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-lg font-bold rounded-2xl shadow-lg';
-  homeButton.textContent = '返回首页';
+  homeButton.className = 'btn-save-glow';
+  homeButton.textContent = '完成并返回首页';
   homeButton.addEventListener('click', () => navigate('home'));
 
   actionSection.appendChild(homeButton);
 
-  page.append(header, chartSection, metricsSection, exerciseSection, comparisonSection, notesSection, actionSection);
+  page.append(header, chartSection, metricsSection, exerciseContainer, comparisonContainer, notesContainer, actionSection);
   container.appendChild(page);
 
   // Initialize charts after DOM is ready
@@ -215,15 +258,17 @@ function initializeCharts(session: Session): void {
 
 async function createComparisonCard(session: Session): Promise<HTMLElement> {
   const card = document.createElement('div');
-  card.className = 'bg-gray-50 rounded-xl p-4';
+  card.className = 'dark-card stats-grid';
+  card.style.margin = '0';
+  card.style.padding = '20px';
 
   // Get chronologically previous workout session (not "previous day")
   const previousSession = await getPreviousSession(session.startTime, session.sessionId);
 
   if (!previousSession) {
     card.innerHTML = `
-      <div class="flex items-center justify-center">
-        <p class="text-gray-500 text-sm">暂无上次锻炼记录</p>
+      <div style="text-align:center; width:100%;">
+        <p style="color:rgba(255,255,255,0.5); font-size:14px;">暂无上次锻炼记录</p>
       </div>
     `;
     return card;
@@ -234,32 +279,38 @@ async function createComparisonCard(session: Session): Promise<HTMLElement> {
   const skippedDiff = session.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.skipped).length, 0) -
     previousSession.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.skipped).length, 0);
 
+  const prevDateText = formatSessionDate(previousSession);
+  const prevRate = Math.round(previousSession.completionRate * 100);
+  const prevDuration = formatDuration(previousSession.totalDuration / 1000);
+
   card.innerHTML = `
-    <div class="flex items-center justify-between">
-      <div class="flex-1">
-        <p class="text-gray-500 text-sm">完成率</p>
-        <p class="${completionDiff >= 0 ? 'text-green-600' : 'text-red-500'} font-semibold flex items-center mt-1">
-          ${completionDiff >= 0 ? '+' : ''}${Math.round(completionDiff)}%
-          ${completionDiff >= 0 ? '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>' : '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>'}
-        </p>
+    <div style="width:100%;">
+      <div class="stats-grid" style="margin-bottom: 16px;">
+        <div class="stat-item">
+          <p class="stat-label">完成率</p>
+          <p class="stat-value" style="color: ${completionDiff >= 0 ? '#4CAF50' : '#EF4444'};">
+            ${completionDiff >= 0 ? '+' : ''}${Math.round(completionDiff)}%
+          </p>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <p class="stat-label">用时差异</p>
+          <p class="stat-value" style="color: ${timeDiff >= 0 ? '#EF4444' : '#4CAF50'};">
+            ${timeDiff >= 0 ? '+' : ''}${formatDuration(Math.abs(timeDiff) / 1000)}
+          </p>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <p class="stat-label">跳过动作</p>
+          <p class="stat-value" style="color: ${skippedDiff <= 0 ? '#4CAF50' : '#EF4444'};">
+            ${skippedDiff > 0 ? '+' : ''}${skippedDiff}
+          </p>
+        </div>
       </div>
-      <div class="w-px h-8 bg-gray-300"></div>
-      <div class="flex-1 text-center">
-        <p class="text-gray-500 text-sm">用时</p>
-        <p class="${timeDiff <= 0 ? 'text-green-600' : 'text-red-500'} font-semibold mt-1">
-          ${timeDiff >= 0 ? '+' : ''}${formatDuration(Math.abs(timeDiff) / 1000)}
-        </p>
-      </div>
-      <div class="w-px h-8 bg-gray-300"></div>
-      <div class="flex-1 text-right">
-        <p class="text-gray-500 text-sm">跳过</p>
-        <p class="${skippedDiff <= 0 ? 'text-green-600' : 'text-red-500'} font-semibold flex items-center justify-end mt-1">
-          ${skippedDiff > 0 ? '+' : ''}${skippedDiff}
-          ${skippedDiff <= 0 ? '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5z"/></svg>' : '<svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>'}
-        </p>
-      </div>
+      <p style="color: rgba(255,255,255,0.4); font-size: 12px; text-align: center;">
+        参照记录：上次锻炼 (${prevDateText}) · 完成 ${prevRate}% · 用时 ${prevDuration}
+      </p>
     </div>
-    <p class="text-gray-400 text-xs mt-3 text-center">上次：${formatSessionDate(previousSession)} · ${Math.round(previousSession.completionRate * 100)}% · ${formatDuration(previousSession.totalDuration / 1000)}</p>
   `;
 
   return card;
@@ -277,7 +328,7 @@ function formatSessionDate(session: Session): string {
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const secs = Math.floor(seconds % 60);
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 

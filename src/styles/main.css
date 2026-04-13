@@ -1,3 +1,5 @@
+@import "./home.css";
+@import "./app-theme.css";
 /* Reset and base styles */
 *, *::before, *::after {
   box-sizing: border-box;

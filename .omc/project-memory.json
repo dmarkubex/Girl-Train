@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775921276097,
+  "lastScanned": 1776040067801,
   "projectRoot": "/Volumes/Out-Memory/Girl-Train",
   "techStack": {
     "languages": [
@@ -44,7 +44,7 @@
   },
   "conventions": {
     "namingStyle": "camelCase",
-    "importStyle": null,
+    "importStyle": "ES modules",
     "testPattern": null,
     "fileOrganization": "type-based"
   },
@@ -52,51 +52,100 @@
     "isMonorepo": false,
     "workspaces": [],
     "mainDirectories": [
+      "public",
       "src"
     ],
     "gitBranches": null
   },
   "customNotes": [],
   "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 9,
+      "lastAccessed": 1776040067794,
+      "keyFiles": [
+        "icon-192x192.svg",
+        "icon-512x512.svg",
+        "index.html",
+        "manifest.json",
+        "registerSW.js"
+      ]
+    },
     "openspec": {
       "path": "openspec",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1775921276079,
+      "lastAccessed": 1776040067796,
       "keyFiles": [
         "config.yaml"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 3,
+      "lastAccessed": 1776040067797,
+      "keyFiles": [
+        "icon-192x192.svg",
+        "icon-512x512.svg",
+        "manifest.json"
       ]
     },
     "src": {
       "path": "src",
       "purpose": "Source code",
-      "fileCount": 2,
-      "lastAccessed": 1775921276091,
+      "fileCount": 5,
+      "lastAccessed": 1776040067797,
       "keyFiles": [
+        "db.ts",
         "main.ts",
-        "router.ts"
+        "router.ts",
+        "state.ts",
+        "types.ts"
+      ]
+    },
+    "dist/assets": {
+      "path": "dist/assets",
+      "purpose": "Static assets",
+      "fileCount": 3,
+      "lastAccessed": 1776040067798,
+      "keyFiles": [
+        "index-CT6KgAzv.js",
+        "index-CT6KgAzv.js.map",
+        "index-DJtfJqr_.css"
       ]
     },
     "src/components": {
       "path": "src/components",
       "purpose": "UI components",
-      "fileCount": 0,
-      "lastAccessed": 1775921276093,
-      "keyFiles": []
+      "fileCount": 3,
+      "lastAccessed": 1776040067798,
+      "keyFiles": [
+        "chart-wrapper.ts",
+        "progress-bar.ts",
+        "timer-display.ts"
+      ]
     },
     "src/utils": {
       "path": "src/utils",
       "purpose": "Utility functions",
-      "fileCount": 0,
-      "lastAccessed": 1775921276093,
-      "keyFiles": []
+      "fileCount": 1,
+      "lastAccessed": 1776040067798,
+      "keyFiles": [
+        "date.ts"
+      ]
     },
     "src/views": {
       "path": "src/views",
       "purpose": "View templates",
-      "fileCount": 0,
-      "lastAccessed": 1775921276094,
-      "keyFiles": []
+      "fileCount": 6,
+      "lastAccessed": 1776040067799,
+      "keyFiles": [
+        "complete.ts",
+        "config.ts",
+        "history.ts"
+      ]
     }
   },
   "hotPaths": [

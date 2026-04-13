@@ -13,11 +13,11 @@ export interface ProgressBarProps {
 
 export function createProgressBar(props: ProgressBarProps): HTMLElement {
   const container = document.createElement('div');
-  container.className = 'px-5 pt-6 pb-4';
+  container.className = 'top-progress';
 
   // Label row
   const labelRow = document.createElement('div');
-  labelRow.className = 'flex items-center justify-between text-gray-400 text-sm mb-2';
+  labelRow.className = 'prog-label-row';
 
   const progressLabel = document.createElement('span');
   progressLabel.textContent = '整体进度';
@@ -30,11 +30,11 @@ export function createProgressBar(props: ProgressBarProps): HTMLElement {
 
   // Progress bar track
   const track = document.createElement('div');
-  track.className = 'h-2 bg-gray-700 rounded-full overflow-hidden';
+  track.className = 'prog-track';
 
   const fill = document.createElement('div');
   fill.id = 'progress-fill';
-  fill.className = 'h-full rounded-full transition-all duration-300';
+  fill.className = 'prog-fill';
 
   // Calculate progress percentage
   const exerciseProgress = props.currentExerciseIndex / props.totalExercises;
@@ -80,6 +80,7 @@ export function updateProgressBar(props: Partial<ProgressBarProps>): void {
     if (props.phase !== undefined) {
       const phaseColor = getPhaseColor(props.phase);
       progressFill.style.backgroundColor = phaseColor;
+      progressFill.style.boxShadow = `0 0 10px ${phaseColor}`;
     }
   }
 }
@@ -87,10 +88,10 @@ export function updateProgressBar(props: Partial<ProgressBarProps>): void {
 function getPhaseColor(phase: 'exercise' | 'rest' | 'project-rest'): string {
   switch (phase) {
     case 'exercise':
-      return 'rgb(251 146 60)'; // orange-400
+      return '#FF6B35'; 
     case 'rest':
-      return 'rgb(74 222 128)'; // green-400
+      return '#10B981'; 
     case 'project-rest':
-      return 'rgb(96 165 250)'; // blue-400
+      return '#0072FF'; 
   }
 }

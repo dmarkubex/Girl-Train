@@ -1,0 +1,350 @@
+/* 
+ * App Wide Pages Theme (History, Config, Workout) 
+ * Consistent OLED Dark Mode & Glassmorphism 
+ */
+
+/* General Page Settings */
+.app-page {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color-workout-bg);
+  background-image: radial-gradient(circle at top left, #29345e 0%, var(--color-workout-bg) 40%);
+  color: var(--color-text-inverse);
+  padding-bottom: 90px;
+}
+
+/* Header standard */
+.page-header {
+  padding: var(--spacing-lg) var(--spacing-xl) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.page-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0 0 var(--spacing-xs);
+}
+
+.page-subtitle {
+  color: rgba(255,255,255,0.6);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* Segmented Control (Toggle) */
+.toggle-panel {
+  padding: 0 var(--spacing-lg) var(--spacing-md);
+}
+
+.toggle-container {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,0.6);
+  transition: all var(--transition-normal);
+  background: transparent;
+  border: none;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+/* Common Card/Section */
+.dark-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  margin: 0 var(--spacing-lg) var(--spacing-lg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Calendar Grid */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.cal-nav-btn {
+  background: rgba(255,255,255,0.1);
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; color: #fff;
+}
+
+.cal-nav-btn:active { background: rgba(255,255,255,0.2); }
+
+.cal-month-label {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.weekday-header {
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: var(--font-size-xs);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.cal-day-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.4);
+  background: rgba(0,0,0,0.2);
+}
+
+.cal-day-cell.active-month {
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+
+.cal-day-cell.status-green {
+  background: #10B981;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.cal-day-cell.status-yellow {
+  background: #F59E0B;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+/* Comparison Stats */
+.stats-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255,255,255,0.1);
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: rgba(255,255,255,0.5);
+  margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+  font-size: var(--font-size-xl);
+  font-weight: bold;
+  font-family: var(--font-family-mono);
+}
+
+/* Config UI */
+.config-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-lg);
+  margin: 0 var(--spacing-lg) var(--spacing-md);
+}
+
+.input-fancy {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  width: 80px;
+  text-align: center;
+  outline: none;
+}
+.input-fancy:focus { border-color: var(--color-primary); }
+
+.exercise-list {
+  padding: 0 var(--spacing-lg);
+}
+
+.exercise-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  display: flex; gap: var(--spacing-md);
+}
+
+.exercise-order-actions {
+  display: flex; flex-direction: column; gap: 8px; justify-content: center;
+}
+
+.icon-btn {
+  background: rgba(255,255,255,0.05); border: none; color: #fff;
+  border-radius: var(--radius-sm); width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-btn:disabled { opacity: 0.3; }
+.icon-btn.danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+.exercise-details {
+  flex: 1;
+}
+
+.flex-row { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-sm); }
+.exercise-name-input {
+  flex: 1; background: transparent; border: none; color: #fff; font-size: var(--font-size-lg); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 2px; outline: none;
+}
+.exercise-name-input:focus { border-bottom-color: var(--color-primary); }
+
+.param-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--spacing-sm);
+}
+
+.param-col label { display: block; font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 4px; text-transform: uppercase; }
+.param-col input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 4px; padding: 6px; text-align: center; }
+
+.btn-secondary {
+  width: 100%; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2);
+  color: #fff; padding: 14px; border-radius: var(--radius-lg); font-weight: bold;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-secondary:active { background: rgba(255,255,255,0.1); }
+
+.config-actions-row {
+  display: flex; gap: var(--spacing-md); padding: 0 var(--spacing-lg) var(--spacing-lg);
+}
+.config-actions-row button {
+  flex: 1; background: rgba(255,255,255,0.1); color: #fff; border: none; padding: 12px; border-radius: var(--radius-lg);
+}
+
+.save-btn-container { padding: 0 var(--spacing-lg) var(--spacing-2xl); }
+.btn-save-glow {
+  width: 100%; background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #fff; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+  border: none; padding: 16px; border-radius: var(--radius-xl); font-size: var(--font-size-lg); font-weight: bold;
+}
+
+/* Workout Fullscreen Page */
+.workout-view {
+  display: flex; flex-direction: column; height: 100vh;
+  background-color: var(--color-workout-bg);
+  background-image: radial-gradient(circle at center, #29345e 0%, var(--color-workout-bg) 70%);
+  color: #fff;
+  overflow: hidden; justify-content: space-between;
+}
+
+.timer-section {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+.timer-exercise-num { color: rgba(255,255,255,0.6); font-size: var(--font-size-lg); margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+.timer-exercise-name { font-size: 32px; font-weight: 800; margin-bottom: 24px; text-align: center; }
+.timer-sets { font-size: 20px; font-weight: medium; color: rgba(255,255,255,0.5); margin-bottom: 32px; }
+.timer-sets .current-set { color: var(--color-primary); font-size: 28px; font-weight: 800; }
+
+.countdown-digits {
+  font-size: 96px; font-weight: 900; font-family: var(--font-family-mono);
+  line-height: 1; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.sets-dots { display: flex; gap: 6px; justify-content: center; }
+.set-dot { width: 32px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); }
+.set-dot.done { background: var(--color-primary); }
+.set-dot.active { background: var(--color-primary); box-shadow: 0 0 10px var(--color-primary); animation: pulse-opacity 1s infinite alternate; }
+
+@keyframes pulse-opacity {
+  0% { opacity: 0.6; } 100% { opacity: 1; }
+}
+
+.workout-controls {
+  padding: var(--spacing-xl) var(--spacing-lg) 60px;
+  display: flex; align-items: center; justify-content: center; gap: 32px;
+}
+
+.ctrl-btn {
+  width: 64px; height: 64px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; color: #fff;
+}
+.ctrl-btn.btn-end { background: var(--color-danger); box-shadow: 0 4px 12px rgba(239,68,68,0.4); }
+.ctrl-btn.btn-skip { background: rgba(255,255,255,0.2); backdrop-filter: blur(8px); }
+.ctrl-btn.btn-pause { width: 88px; height: 88px; background: #fff; color: var(--color-workout-bg); box-shadow: 0 8px 24px rgba(255,255,255,0.3); }
+
+/* Progress Bar Components */
+.top-progress { padding: var(--spacing-lg) var(--spacing-lg) 0; }
+.prog-label-row { display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
+.prog-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; transition: width 0.3s ease, background 0.3s; }
+
+/* Phase badges container */
+.phase-badge-wrapper {
+  display: flex; justify-content: center; margin-bottom: var(--spacing-lg); margin-top: 10px;
+}
+.phase-badge {
+  display: inline-flex; align-items: center; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;
+}
+.phase-badge.phase-exercise { background: linear-gradient(135deg, #FF8C42 0%, #FF6B35 100%); }
+.phase-badge.phase-rest { background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%); }
+.phase-badge.phase-project-rest { background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%); }
+
+.pause-overlay-view {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
+}
+.pause-overlay-view h2 { font-size: 24px; margin-bottom: 12px; }
+.pause-overlay-view p { color: rgba(255,255,255,0.6); }
+
+/* Icon sizes */
+.icon-24 { width: 24px; height: 24px; }
+.icon-32 { width: 32px; height: 32px; }
+.icon-40 { width: 40px; height: 40px; }
