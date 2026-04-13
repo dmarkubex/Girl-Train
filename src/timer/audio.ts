@@ -41,6 +41,22 @@ export class AudioManager {
     // Some browsers may not expose WebAudio but still support speech synthesis.
     if (this.voiceEnabled) {
       this.initialized = true;
+      // iOS requires speechSynthesis to be triggered within a user gesture to
+      // unlock it for later timer-callback calls. Fire a silent warm-up here.
+      try {
+        const warmup = new SpeechSynthesisUtterance('');
+        warmup.volume = 0;
+        window.speechSynthesis.speak(warmup);
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  /** Ensure AudioContext is running (iOS suspends it on calls / screen lock). */
+  private ensureAudioReady(): void {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      void this.ctx.resume();
     }
   }
 
@@ -54,15 +70,28 @@ export class AudioManager {
     }
 
     try {
+      // iOS bug: speechSynthesis can get stuck in "paused" state.
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'zh-CN';
       utterance.rate = options?.rate ?? 1;
       utterance.pitch = options?.pitch ?? 1;
       utterance.volume = options?.volume ?? 1;
 
+      // Explicitly pick a Chinese voice when available (avoids silent fallback on iOS).
+      const voices = window.speechSynthesis.getVoices();
+      const zhVoice = voices.find(v => v.lang.startsWith('zh'));
+      if (zhVoice) {
+        utterance.voice = zhVoice;
+      }
+
       // Drop pending utterances so new guidance stays relevant to current phase.
+      // iOS needs a tiny gap after cancel() before speak() takes effect.
       window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utterance);
+      setTimeout(() => window.speechSynthesis.speak(utterance), 50);
     } catch (err) {
       console.warn('Failed to speak guidance:', err);
     }
@@ -93,6 +122,7 @@ export class AudioManager {
     }
 
     try {
+      this.ensureAudioReady();
       const now = this.ctx.currentTime;
 
       for (let i = 0; i < count; i++) {
@@ -127,6 +157,7 @@ export class AudioManager {
     }
 
     try {
+      this.ensureAudioReady();
       const now = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();

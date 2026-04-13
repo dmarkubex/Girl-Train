@@ -20,6 +20,25 @@ let previousPhase: TimerContext['phase'] | null = null;
 let suppressNextPhaseSound = false;
 let workoutConfig: AppConfig | null = null;
 let announcedCountdownSeconds = new Set<number>();
+let announcedMilestones = new Set<string>();
+
+const ENCOURAGE_HALFWAY = [
+  '过半了，加油坚持！',
+  '已经完成一半，继续！',
+  '不错，保持这个节奏！',
+  '做得很好，加把劲！',
+];
+
+const ENCOURAGE_FINAL_STRETCH = [
+  '最后冲刺，快要完成了！',
+  '只剩最后一段，坚持！',
+  '太棒了，最后的努力！',
+  '快完成了，加油！',
+];
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 export function render(container: HTMLElement): void {
   const page = document.createElement('div');
@@ -265,6 +284,7 @@ function playPhaseTransitionSound(state: TimerState, ctx: TimerContext): void {
   if (!isActiveState) return;
 
   announcedCountdownSeconds = new Set<number>();
+  announcedMilestones = new Set<string>();
 
   if (suppressNextPhaseSound) {
     suppressNextPhaseSound = false;
@@ -301,25 +321,45 @@ function handleTimerTick(remainingMs: number): void {
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   updateTimerDisplay({ remainingSeconds });
 
-  if (!timerEngine || !audioManager || !workoutConfig?.audioCoach?.countdownReminderEnabled) {
-    return;
-  }
+  if (!timerEngine || !audioManager) return;
 
+  let ctx: TimerContext | null = null;
   try {
-    timerEngine.getContext();
+    ctx = timerEngine.getContext();
   } catch {
-    return;
+    // context not available yet
   }
 
-  if ((remainingSeconds === 10 || remainingSeconds <= 3) && remainingSeconds > 0 && !announcedCountdownSeconds.has(remainingSeconds)) {
-    announcedCountdownSeconds.add(remainingSeconds);
-    audioManager.speak(`还有 ${remainingSeconds} 秒`);
+  // --- Countdown reminders (10s + last 3s) ---
+  if (workoutConfig?.audioCoach?.countdownReminderEnabled && ctx) {
+    if ((remainingSeconds === 10 || remainingSeconds <= 3) && remainingSeconds > 0 && !announcedCountdownSeconds.has(remainingSeconds)) {
+      announcedCountdownSeconds.add(remainingSeconds);
+      audioManager.speak(`还有 ${remainingSeconds} 秒`);
+    }
+    if (remainingSeconds <= 3 && remainingSeconds > 0) {
+      audioManager.playTick();
+      if (navigator.vibrate) navigator.vibrate(50);
+    }
   }
 
-  if (remainingSeconds <= 3 && remainingSeconds > 0 && audioManager) {
-    audioManager.playTick();
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
+  // --- Mid-exercise motivational encouragement (sets ≥ 25 s) ---
+  if (
+    workoutConfig?.audioCoach?.voiceGuidanceEnabled &&
+    ctx?.phase === 'exercise'
+  ) {
+    const exercise = workoutConfig.exercises[ctx.exerciseIndex];
+    const setDurationSeconds = exercise?.setDurationSeconds ?? 0;
+    const totalMs = setDurationSeconds * 1000;
+    // Only encourage on longer sets, and stop before the countdown window
+    if (setDurationSeconds >= 25 && remainingMs > 12000) {
+      const progress = (totalMs - remainingMs) / totalMs;
+      if (progress >= 0.5 && !announcedMilestones.has('50')) {
+        announcedMilestones.add('50');
+        audioManager.speak(pickRandom(ENCOURAGE_HALFWAY));
+      } else if (progress >= 0.75 && !announcedMilestones.has('75')) {
+        announcedMilestones.add('75');
+        audioManager.speak(pickRandom(ENCOURAGE_FINAL_STRETCH));
+      }
     }
   }
 }
@@ -546,6 +586,7 @@ function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
   suppressNextPhaseSound = false;
   workoutConfig = null;
   announcedCountdownSeconds = new Set<number>();
+  announcedMilestones = new Set<string>();
 }
 
 export function cleanup(): void {
