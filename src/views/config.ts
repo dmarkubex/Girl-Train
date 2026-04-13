@@ -67,6 +67,51 @@ export async function render(container: HTMLElement): Promise<void> {
   restContainer.append(restInfo, restInputContainer);
   restSection.appendChild(restContainer);
 
+  // Audio Coach Settings
+  const audioSection = document.createElement('div');
+  audioSection.className = 'config-group';
+
+  const voiceContainer = document.createElement('div');
+  voiceContainer.className = 'config-item';
+
+  const voiceInfo = document.createElement('div');
+  const voiceLabel = document.createElement('div');
+  voiceLabel.style.fontWeight = 'bold';
+  voiceLabel.style.marginBottom = '2px';
+  voiceLabel.textContent = '动作语音要领';
+  const voiceDesc = document.createElement('div');
+  voiceDesc.style.fontSize = '12px';
+  voiceDesc.style.color = 'rgba(255,255,255,0.5)';
+  voiceDesc.textContent = '每组开始时播报动作重点';
+  voiceInfo.append(voiceLabel, voiceDesc);
+
+  const voiceToggle = document.createElement('input');
+  voiceToggle.type = 'checkbox';
+  voiceToggle.id = 'voice-guidance-toggle';
+
+  voiceContainer.append(voiceInfo, voiceToggle);
+
+  const countdownContainer = document.createElement('div');
+  countdownContainer.className = 'config-item';
+
+  const countdownInfo = document.createElement('div');
+  const countdownLabel = document.createElement('div');
+  countdownLabel.style.fontWeight = 'bold';
+  countdownLabel.style.marginBottom = '2px';
+  countdownLabel.textContent = '倒计时语音提醒';
+  const countdownDesc = document.createElement('div');
+  countdownDesc.style.fontSize = '12px';
+  countdownDesc.style.color = 'rgba(255,255,255,0.5)';
+  countdownDesc.textContent = '剩余 10 秒和最后 3 秒进行语音播报';
+  countdownInfo.append(countdownLabel, countdownDesc);
+
+  const countdownToggle = document.createElement('input');
+  countdownToggle.type = 'checkbox';
+  countdownToggle.id = 'countdown-reminder-toggle';
+
+  countdownContainer.append(countdownInfo, countdownToggle);
+  audioSection.append(voiceContainer, countdownContainer);
+
   // Exercise List
   const listSection = document.createElement('div');
   listSection.className = 'exercise-list';
@@ -108,7 +153,7 @@ export async function render(container: HTMLElement): Promise<void> {
 
   saveSection.appendChild(saveButton);
 
-  page.append(header, restSection, listSection, addSection, dataSection, saveSection);
+  page.append(header, restSection, audioSection, listSection, addSection, dataSection, saveSection);
   
   const nav = createBottomNav('config');
   page.appendChild(nav);
@@ -128,6 +173,16 @@ async function loadConfig(): Promise<void> {
     const restInput = document.getElementById('project-rest-input') as HTMLInputElement;
     if (restInput) {
       restInput.value = config.projectRestSeconds.toString();
+    }
+
+    const voiceToggle = document.getElementById('voice-guidance-toggle') as HTMLInputElement | null;
+    if (voiceToggle) {
+      voiceToggle.checked = config.audioCoach?.voiceGuidanceEnabled ?? true;
+    }
+
+    const countdownToggle = document.getElementById('countdown-reminder-toggle') as HTMLInputElement | null;
+    if (countdownToggle) {
+      countdownToggle.checked = config.audioCoach?.countdownReminderEnabled ?? true;
     }
 
     renderExerciseList();
@@ -195,6 +250,17 @@ function createExerciseCard(exercise: Exercise, index: number): HTMLElement {
   const paramsGrid = document.createElement('div');
   paramsGrid.className = 'param-grid';
 
+  const tipGroup = document.createElement('div');
+  tipGroup.className = 'param-col';
+  tipGroup.style.gridColumn = '1 / -1';
+  tipGroup.innerHTML = '<label>动作要领提示词</label>';
+  const tipInput = document.createElement('input');
+  tipInput.type = 'text';
+  tipInput.value = exercise.coachingTip || '';
+  tipInput.placeholder = '例：收紧核心，肩胛下沉，呼气发力';
+  tipInput.addEventListener('change', (e) => updateExerciseCoachingTip(index, (e.target as HTMLInputElement).value));
+  tipGroup.appendChild(tipInput);
+
   const durationGroup = document.createElement('div');
   durationGroup.className = 'param-col';
   durationGroup.innerHTML = '<label>时长 (秒)</label>';
@@ -225,7 +291,7 @@ function createExerciseCard(exercise: Exercise, index: number): HTMLElement {
   setsInput.addEventListener('change', (e) => updateExerciseSets(index, (e.target as HTMLInputElement).value));
   setsGroup.appendChild(setsInput);
 
-  paramsGrid.append(durationGroup, restGroup, setsGroup);
+  paramsGrid.append(tipGroup, durationGroup, restGroup, setsGroup);
   info.append(nameRow, paramsGrid);
 
   const deleteButton = document.createElement('button');
@@ -242,6 +308,7 @@ function addNewExercise(): void {
   const newExercise: Exercise = {
     id: `ex-${Date.now()}`,
     name: '新项目',
+    coachingTip: '',
     setDurationSeconds: 60,
     restSeconds: 15,
     totalSets: 9,
@@ -265,6 +332,10 @@ function updateExerciseRest(index: number, value: string): void {
 function updateExerciseSets(index: number, value: string): void {
   const num = parseInt(value, 10);
   if (exercises[index] && num > 0) exercises[index].totalSets = num;
+}
+
+function updateExerciseCoachingTip(index: number, value: string): void {
+  if (exercises[index]) exercises[index].coachingTip = value.trim();
 }
 
 function moveExercise(index: number, direction: number): void {
@@ -308,13 +379,23 @@ async function handleSave(): Promise<void> {
 
   const restInput = document.getElementById('project-rest-input') as HTMLInputElement;
   const projectRestSeconds = parseInt(restInput?.value || '60', 10);
+  const voiceToggle = document.getElementById('voice-guidance-toggle') as HTMLInputElement | null;
+  const countdownToggle = document.getElementById('countdown-reminder-toggle') as HTMLInputElement | null;
 
   if (errors.length > 0) {
     alert('参数有误：\n' + errors.join('\n'));
     return;
   }
 
-  const config: AppConfig = { id: 'default', exercises, projectRestSeconds };
+  const config: AppConfig = {
+    id: 'default',
+    exercises,
+    projectRestSeconds,
+    audioCoach: {
+      voiceGuidanceEnabled: voiceToggle?.checked ?? true,
+      countdownReminderEnabled: countdownToggle?.checked ?? true,
+    }
+  };
 
   try {
     await saveConfig(config);

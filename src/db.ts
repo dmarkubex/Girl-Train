@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { AppConfig, Session, StreakInfo } from './types.js';
+import type { AppConfig, AudioCoachSettings, Session, StreakInfo } from './types.js';
 import { getBusinessDate } from './utils/date.js';
 
 interface ExerciseTrackerDB extends DBSchema {
@@ -19,6 +19,10 @@ interface ExerciseTrackerDB extends DBSchema {
 
 const DB_NAME = 'exercise-tracker';
 const DB_VERSION = 1;
+const DEFAULT_AUDIO_COACH: AudioCoachSettings = {
+  voiceGuidanceEnabled: true,
+  countdownReminderEnabled: true
+};
 
 let dbInstance: IDBPDatabase<ExerciseTrackerDB> | null = null;
 
@@ -59,7 +63,8 @@ export async function openDatabase(): Promise<IDBPDatabase<ExerciseTrackerDB>> {
  */
 export async function getConfig(): Promise<AppConfig | undefined> {
   const db = await openDatabase();
-  return db.get('config', 'default');
+  const config = await db.get('config', 'default');
+  return config ? normalizeConfig(config) : undefined;
 }
 
 /**
@@ -67,7 +72,21 @@ export async function getConfig(): Promise<AppConfig | undefined> {
  */
 export async function saveConfig(config: AppConfig): Promise<void> {
   const db = await openDatabase();
-  await db.put('config', config);
+  await db.put('config', normalizeConfig(config));
+}
+
+function normalizeConfig(config: AppConfig): AppConfig {
+  return {
+    ...config,
+    exercises: config.exercises.map((exercise) => ({
+      ...exercise,
+      coachingTip: exercise.coachingTip?.trim() || ''
+    })),
+    audioCoach: {
+      ...DEFAULT_AUDIO_COACH,
+      ...config.audioCoach
+    }
+  };
 }
 
 /**
@@ -80,6 +99,7 @@ export function getDefaultConfig(): AppConfig {
       {
         id: '1',
         name: '抱头展胸',
+        coachingTip: '保持脊柱延展，肘部外展，呼气时轻收下巴。',
         setDurationSeconds: 70,
         restSeconds: 15,
         totalSets: 9,
@@ -88,13 +108,15 @@ export function getDefaultConfig(): AppConfig {
       {
         id: '2',
         name: '上胸弯对抗',
+        coachingTip: '核心收紧，动作慢而稳，避免借力耸肩。',
         setDurationSeconds: 70,
         restSeconds: 15,
         totalSets: 9,
         order: 2
       }
     ],
-    projectRestSeconds: 60
+    projectRestSeconds: 60,
+    audioCoach: DEFAULT_AUDIO_COACH
   };
 }
 

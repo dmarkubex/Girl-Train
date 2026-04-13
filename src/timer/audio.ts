@@ -1,6 +1,7 @@
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private initialized: boolean = false;
+  private voiceEnabled: boolean = false;
 
   /**
    * Initialize AudioContext - MUST be called from user gesture (click/touch)
@@ -9,6 +10,8 @@ export class AudioManager {
     if (this.initialized) {
       return;
     }
+
+    this.voiceEnabled = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -33,6 +36,47 @@ export class AudioManager {
       }
     } catch (err) {
       console.warn('Audio initialization failed:', err);
+    }
+
+    // Some browsers may not expose WebAudio but still support speech synthesis.
+    if (this.voiceEnabled) {
+      this.initialized = true;
+    }
+  }
+
+  supportsVoice(): boolean {
+    return this.voiceEnabled;
+  }
+
+  speak(text: string, options?: { rate?: number; pitch?: number; volume?: number }): void {
+    if (!this.voiceEnabled || !text.trim()) {
+      return;
+    }
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'zh-CN';
+      utterance.rate = options?.rate ?? 1;
+      utterance.pitch = options?.pitch ?? 1;
+      utterance.volume = options?.volume ?? 1;
+
+      // Drop pending utterances so new guidance stays relevant to current phase.
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('Failed to speak guidance:', err);
+    }
+  }
+
+  stopVoice(): void {
+    if (!this.voiceEnabled) {
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+    } catch (err) {
+      console.warn('Failed to stop voice synthesis:', err);
     }
   }
 
@@ -147,6 +191,7 @@ export class AudioManager {
    * Clean up resources
    */
   destroy(): void {
+    this.stopVoice();
     if (this.ctx && this.ctx.state !== 'closed') {
       this.ctx.close();
     }

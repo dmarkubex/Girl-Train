@@ -1,16 +1,23 @@
 export interface Exercise {
   id: string;
   name: string;
+  coachingTip?: string;
   setDurationSeconds: number;
   restSeconds: number;
   totalSets: number;
   order: number;
 }
 
+export interface AudioCoachSettings {
+  voiceGuidanceEnabled: boolean;
+  countdownReminderEnabled: boolean;
+}
+
 export interface AppConfig {
   id: "default";
   exercises: Exercise[];
   projectRestSeconds: number;
+  audioCoach: AudioCoachSettings;
 }
 
 export interface SessionSet {

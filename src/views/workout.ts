@@ -11,12 +11,15 @@ import { loadSnapshot, clearSnapshot, saveIncompleteAndClear, markSnapshotPaused
 import { setState, getState } from '../state';
 import { createTimerDisplay, updateTimerDisplay } from '../components/timer-display';
 import { createProgressBar } from '../components/progress-bar';
+import type { AppConfig } from '../types';
 
 let timerEngine: TimerEngine | null = null;
 let audioManager: AudioManager | null = null;
 let currentState: TimerState = 'idle';
 let previousPhase: TimerContext['phase'] | null = null;
 let suppressNextPhaseSound = false;
+let workoutConfig: AppConfig | null = null;
+let announcedCountdownSeconds = new Set<number>();
 
 export function render(container: HTMLElement): void {
   const page = document.createElement('div');
@@ -168,6 +171,7 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
 
     // Reuse globally unlocked audio context.
     audioManager = getGlobalAudioManager();
+    workoutConfig = config;
 
     // Create timer engine with event handlers
     timerEngine = new TimerEngine({
@@ -227,7 +231,7 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
 
 function handleTimerStateChange(state: TimerState, ctx: TimerContext): void {
   currentState = state;
-  playPhaseTransitionSound(state, ctx.phase);
+  playPhaseTransitionSound(state, ctx);
 
   updatePhaseBadge(ctx.phase);
 
@@ -253,11 +257,14 @@ function handleTimerStateChange(state: TimerState, ctx: TimerContext): void {
   updateFullDisplay(ctx);
 }
 
-function playPhaseTransitionSound(state: TimerState, phase: TimerContext['phase']): void {
+function playPhaseTransitionSound(state: TimerState, ctx: TimerContext): void {
   if (!audioManager) return;
 
+  const phase = ctx.phase;
   const isActiveState = state === 'exercising' || state === 'resting' || state === 'project-rest';
   if (!isActiveState) return;
+
+  announcedCountdownSeconds = new Set<number>();
 
   if (suppressNextPhaseSound) {
     suppressNextPhaseSound = false;
@@ -268,6 +275,7 @@ function playPhaseTransitionSound(state: TimerState, phase: TimerContext['phase'
   if (previousPhase === null) {
     if (phase === 'exercise') {
       audioManager.playExerciseStart();
+      announceExerciseGuidance(ctx);
     }
     previousPhase = phase;
     return;
@@ -279,6 +287,10 @@ function playPhaseTransitionSound(state: TimerState, phase: TimerContext['phase'
     }
     if (phase === 'exercise') {
       audioManager.playExerciseStart();
+      announceExerciseGuidance(ctx);
+    }
+    if (phase === 'rest' || phase === 'project-rest') {
+      announcePhaseStart(phase);
     }
   }
 
@@ -289,11 +301,59 @@ function handleTimerTick(remainingMs: number): void {
   const remainingSeconds = Math.ceil(remainingMs / 1000);
   updateTimerDisplay({ remainingSeconds });
 
+  if (!timerEngine || !audioManager || !workoutConfig?.audioCoach?.countdownReminderEnabled) {
+    return;
+  }
+
+  try {
+    timerEngine.getContext();
+  } catch {
+    return;
+  }
+
+  if ((remainingSeconds === 10 || remainingSeconds <= 3) && remainingSeconds > 0 && !announcedCountdownSeconds.has(remainingSeconds)) {
+    announcedCountdownSeconds.add(remainingSeconds);
+    audioManager.speak(`还有 ${remainingSeconds} 秒`);
+  }
+
   if (remainingSeconds <= 3 && remainingSeconds > 0 && audioManager) {
     audioManager.playTick();
     if (navigator.vibrate) {
       navigator.vibrate(50);
     }
+  }
+}
+
+function announceExerciseGuidance(ctx: TimerContext): void {
+  if (!audioManager || !workoutConfig?.audioCoach?.voiceGuidanceEnabled) {
+    return;
+  }
+
+  const exercise = workoutConfig.exercises[ctx.exerciseIndex];
+  if (!exercise) {
+    return;
+  }
+
+  const parts = [
+    `开始 ${ctx.exerciseName}，第 ${ctx.currentSet} 组，共 ${ctx.totalSets} 组。`
+  ];
+
+  if (exercise.coachingTip && exercise.coachingTip.trim()) {
+    parts.push(exercise.coachingTip.trim());
+  }
+
+  audioManager.speak(parts.join(' '));
+}
+
+function announcePhaseStart(phase: TimerContext['phase']): void {
+  if (!audioManager || !workoutConfig?.audioCoach?.voiceGuidanceEnabled) {
+    return;
+  }
+
+  if (phase === 'rest') {
+    audioManager.speak('休息开始，调整呼吸。');
+  } else if (phase === 'project-rest') {
+    audioManager.speak('动作切换休息，准备下一个动作。');
   }
 }
 
@@ -477,12 +537,15 @@ function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
     timerEngine.destroy();
     timerEngine = null;
   }
+  audioManager?.stopVoice();
   if (options?.clearSnapshot) {
     clearSnapshot();
   }
   currentState = 'idle';
   previousPhase = null;
   suppressNextPhaseSound = false;
+  workoutConfig = null;
+  announcedCountdownSeconds = new Set<number>();
 }
 
 export function cleanup(): void {
