@@ -13,11 +13,38 @@ export interface AudioCoachSettings {
   countdownReminderEnabled: boolean;
 }
 
+export interface MusicSettings {
+  enabled: boolean;
+  exerciseMusicFileId?: string;
+  restMusicFileId?: string;
+  exerciseVolume: number;
+  restVolume: number;
+}
+
+export type VoiceScene =
+  | 'exercise_start'
+  | 'rest_start'
+  | 'project_rest_start'
+  | 'workout_complete'
+  | 'encourage';
+
+export interface VoicePackSettings {
+  scenes: Partial<Record<VoiceScene, string>>;
+}
+
+export interface AudioFileRecord {
+  id: string;
+  name: string;
+  blob: Blob;
+}
+
 export interface AppConfig {
   id: "default";
   exercises: Exercise[];
   projectRestSeconds: number;
   audioCoach: AudioCoachSettings;
+  musicSettings: MusicSettings;
+  voicePackSettings: VoicePackSettings;
 }
 
 export interface SessionSet {

@@ -3,11 +3,15 @@
  * Manage exercise configuration and data import/export
  */
 
-import { getConfig, saveConfig, exportAllData, importData } from '../db';
+import { getConfig, saveConfig, saveAudioFile, getAudioFile, deleteAudioFile, exportAllData, importData } from '../db';
 import { createBottomNav } from '../components/bottom-nav';
-import type { AppConfig, Exercise } from '../types';
+import type { AppConfig, Exercise, MusicSettings, VoicePackSettings, VoiceScene } from '../types';
 
 let exercises: Exercise[] = [];
+let musicSettings: MusicSettings = { enabled: false, exerciseVolume: 0.5, restVolume: 0.3 };
+let voicePackSettings: VoicePackSettings = { scenes: {} };
+// Track file IDs to remove when user clears them before saving.
+const pendingAudioDeletions: string[] = [];
 
 export async function render(container: HTMLElement): Promise<void> {
   const page = document.createElement('div');
@@ -112,6 +116,12 @@ export async function render(container: HTMLElement): Promise<void> {
   countdownContainer.append(countdownInfo, countdownToggle);
   audioSection.append(voiceContainer, countdownContainer);
 
+  // ── Music Settings ──────────────────────────────────────────────────────────
+  const musicSection = createMusicSettingsSection();
+
+  // ── Voice Pack Section ──────────────────────────────────────────────────────
+  const voicePackSection = createVoicePackSection();
+
   // Exercise List
   const listSection = document.createElement('div');
   listSection.className = 'exercise-list';
@@ -153,7 +163,7 @@ export async function render(container: HTMLElement): Promise<void> {
 
   saveSection.appendChild(saveButton);
 
-  page.append(header, restSection, audioSection, listSection, addSection, dataSection, saveSection);
+  page.append(header, restSection, audioSection, musicSection, voicePackSection, listSection, addSection, dataSection, saveSection);
   
   const nav = createBottomNav('config');
   page.appendChild(nav);
@@ -184,6 +194,14 @@ async function loadConfig(): Promise<void> {
     if (countdownToggle) {
       countdownToggle.checked = config.audioCoach?.countdownReminderEnabled ?? true;
     }
+
+    // Music settings
+    musicSettings = { ...config.musicSettings };
+    populateMusicSettingsUI();
+
+    // Voice pack settings
+    voicePackSettings = { scenes: { ...config.voicePackSettings?.scenes } };
+    await populateVoicePackUI();
 
     renderExerciseList();
   } catch (error) {
@@ -387,6 +405,12 @@ async function handleSave(): Promise<void> {
     return;
   }
 
+  // Commit any pending audio file deletions.
+  for (const id of pendingAudioDeletions) {
+    try { await deleteAudioFile(id); } catch { /* non-fatal */ }
+  }
+  pendingAudioDeletions.length = 0;
+
   const config: AppConfig = {
     id: 'default',
     exercises,
@@ -394,7 +418,9 @@ async function handleSave(): Promise<void> {
     audioCoach: {
       voiceGuidanceEnabled: voiceToggle?.checked ?? true,
       countdownReminderEnabled: countdownToggle?.checked ?? true,
-    }
+    },
+    musicSettings: { ...musicSettings },
+    voicePackSettings: { scenes: { ...voicePackSettings.scenes } },
   };
 
   try {
@@ -449,4 +475,343 @@ async function handleImport(): Promise<void> {
 
 export function cleanup(): void {
   exercises = [];
+  musicSettings = { enabled: false, exerciseVolume: 0.5, restVolume: 0.3 };
+  voicePackSettings = { scenes: {} };
+  pendingAudioDeletions.length = 0;
+}
+
+// ─── Music Settings Section ───────────────────────────────────────────────────
+
+function createMusicSettingsSection(): HTMLElement {
+  const section = document.createElement('div');
+  section.className = 'config-group';
+  section.id = 'music-settings-section';
+
+  const header = document.createElement('div');
+  header.className = 'config-item';
+
+  const info = document.createElement('div');
+  const label = document.createElement('div');
+  label.style.fontWeight = 'bold';
+  label.style.marginBottom = '2px';
+  label.textContent = '背景音乐伴奏';
+  const desc = document.createElement('div');
+  desc.style.fontSize = '12px';
+  desc.style.color = 'rgba(255,255,255,0.5)';
+  desc.textContent = '锻炼时播放本地音乐，休息时自动降低音量';
+  info.append(label, desc);
+
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.id = 'music-enabled-toggle';
+  toggle.checked = musicSettings.enabled;
+  toggle.addEventListener('change', () => {
+    musicSettings.enabled = toggle.checked;
+    updateMusicDetailVisibility();
+  });
+
+  header.append(info, toggle);
+  section.appendChild(header);
+
+  // Detail panel (volume sliders + file uploads)
+  const detail = document.createElement('div');
+  detail.id = 'music-detail-panel';
+  detail.style.display = musicSettings.enabled ? 'block' : 'none';
+  detail.style.padding = '0 var(--spacing-lg) var(--spacing-sm)';
+
+  // Exercise music file row
+  detail.appendChild(createMusicFileRow(
+    'music-exercise-file',
+    '锻炼音乐',
+    '锻炼阶段播放',
+    'exerciseMusicFileId',
+  ));
+
+  // Rest music file row
+  detail.appendChild(createMusicFileRow(
+    'music-rest-file',
+    '休息音乐（可选）',
+    '休息阶段切换，未上传则仅降低锻炼音乐音量',
+    'restMusicFileId',
+  ));
+
+  // Volume sliders
+  detail.appendChild(createVolumeSlider('music-exercise-vol', '锻炼音量', musicSettings.exerciseVolume, (v) => {
+    musicSettings.exerciseVolume = v;
+  }));
+  detail.appendChild(createVolumeSlider('music-rest-vol', '休息音量', musicSettings.restVolume, (v) => {
+    musicSettings.restVolume = v;
+  }));
+
+  section.appendChild(detail);
+  return section;
+}
+
+function createMusicFileRow(
+  rowId: string,
+  labelText: string,
+  descText: string,
+  settingKey: 'exerciseMusicFileId' | 'restMusicFileId',
+): HTMLElement {
+  const row = document.createElement('div');
+  row.style.marginBottom = '12px';
+
+  const rowLabel = document.createElement('div');
+  rowLabel.style.fontSize = '13px';
+  rowLabel.style.fontWeight = 'bold';
+  rowLabel.style.marginBottom = '4px';
+  rowLabel.textContent = labelText;
+
+  const rowDesc = document.createElement('div');
+  rowDesc.style.fontSize = '11px';
+  rowDesc.style.color = 'rgba(255,255,255,0.4)';
+  rowDesc.style.marginBottom = '6px';
+  rowDesc.textContent = descText;
+
+  const statusEl = document.createElement('div');
+  statusEl.id = `${rowId}-status`;
+  statusEl.style.fontSize = '12px';
+  statusEl.style.color = 'rgba(255,255,255,0.6)';
+  statusEl.style.marginBottom = '6px';
+  statusEl.textContent = musicSettings[settingKey] ? '已上传音乐文件' : '未上传';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.display = 'flex';
+  btnRow.style.gap = '8px';
+
+  const uploadBtn = document.createElement('button');
+  uploadBtn.className = 'btn-secondary';
+  uploadBtn.style.fontSize = '12px';
+  uploadBtn.style.padding = '6px 12px';
+  uploadBtn.textContent = '上传音频';
+  uploadBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const fileId = `music-${settingKey}-${crypto.randomUUID()}`;
+      await saveAudioFile({ id: fileId, name: file.name, blob: file });
+      // Queue deletion of old file
+      const oldId = musicSettings[settingKey];
+      if (oldId) pendingAudioDeletions.push(oldId);
+      musicSettings[settingKey] = fileId;
+      statusEl.textContent = `✓ ${file.name}`;
+      clearBtn.style.display = 'inline-block';
+    };
+    input.click();
+  });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'btn-secondary';
+  clearBtn.style.fontSize = '12px';
+  clearBtn.style.padding = '6px 12px';
+  clearBtn.style.display = musicSettings[settingKey] ? 'inline-block' : 'none';
+  clearBtn.textContent = '清除';
+  clearBtn.addEventListener('click', () => {
+    const oldId = musicSettings[settingKey];
+    if (oldId) pendingAudioDeletions.push(oldId);
+    musicSettings[settingKey] = undefined;
+    statusEl.textContent = '未上传';
+    clearBtn.style.display = 'none';
+  });
+
+  btnRow.append(uploadBtn, clearBtn);
+  row.append(rowLabel, rowDesc, statusEl, btnRow);
+  return row;
+}
+
+function createVolumeSlider(
+  id: string,
+  labelText: string,
+  initial: number,
+  onChange: (v: number) => void,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.style.marginBottom = '12px';
+  row.style.display = 'flex';
+  row.style.alignItems = 'center';
+  row.style.gap = '10px';
+
+  const lbl = document.createElement('label');
+  lbl.htmlFor = id;
+  lbl.style.fontSize = '13px';
+  lbl.style.minWidth = '70px';
+  lbl.textContent = labelText;
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.id = id;
+  slider.min = '0';
+  slider.max = '1';
+  slider.step = '0.05';
+  slider.value = initial.toString();
+  slider.style.flex = '1';
+
+  const pct = document.createElement('span');
+  pct.style.fontSize = '12px';
+  pct.style.color = 'rgba(255,255,255,0.5)';
+  pct.style.minWidth = '34px';
+  pct.textContent = `${Math.round(initial * 100)}%`;
+
+  slider.addEventListener('input', () => {
+    const v = parseFloat(slider.value);
+    pct.textContent = `${Math.round(v * 100)}%`;
+    onChange(v);
+  });
+
+  row.append(lbl, slider, pct);
+  return row;
+}
+
+function updateMusicDetailVisibility(): void {
+  const panel = document.getElementById('music-detail-panel');
+  if (panel) panel.style.display = musicSettings.enabled ? 'block' : 'none';
+}
+
+function populateMusicSettingsUI(): void {
+  const toggle = document.getElementById('music-enabled-toggle') as HTMLInputElement | null;
+  if (toggle) toggle.checked = musicSettings.enabled;
+
+  const exStatus = document.getElementById('music-exercise-file-status');
+  if (exStatus) exStatus.textContent = musicSettings.exerciseMusicFileId ? '已上传音乐文件' : '未上传';
+
+  const restStatus = document.getElementById('music-rest-file-status');
+  if (restStatus) restStatus.textContent = musicSettings.restMusicFileId ? '已上传音乐文件' : '未上传';
+
+  const exVol = document.getElementById('music-exercise-vol') as HTMLInputElement | null;
+  if (exVol) exVol.value = (musicSettings.exerciseVolume ?? 0.5).toString();
+
+  const restVol = document.getElementById('music-rest-vol') as HTMLInputElement | null;
+  if (restVol) restVol.value = (musicSettings.restVolume ?? 0.3).toString();
+
+  updateMusicDetailVisibility();
+}
+
+// ─── Voice Pack Section ───────────────────────────────────────────────────────
+
+const VOICE_SCENES: Array<{ key: VoiceScene; label: string; desc: string }> = [
+  { key: 'exercise_start', label: '动作开始提示', desc: '每组动作开始时播放' },
+  { key: 'rest_start', label: '休息开始提示', desc: '组间休息开始时播放' },
+  { key: 'project_rest_start', label: '项目间休息提示', desc: '不同动作切换时播放' },
+  { key: 'workout_complete', label: '锻炼完成提示', desc: '完整锻炼结束时播放' },
+  { key: 'encourage', label: '激励语音', desc: '锻炼中随机插入的鼓励语' },
+];
+
+function createVoicePackSection(): HTMLElement {
+  const section = document.createElement('div');
+  section.className = 'config-group';
+  section.id = 'voice-pack-section';
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'config-item';
+  titleRow.style.flexDirection = 'column';
+  titleRow.style.alignItems = 'flex-start';
+  titleRow.style.gap = '4px';
+
+  const titleEl = document.createElement('div');
+  titleEl.style.fontWeight = 'bold';
+  titleEl.textContent = '录音陪伴音色包';
+
+  const titleDesc = document.createElement('div');
+  titleDesc.style.fontSize = '12px';
+  titleDesc.style.color = 'rgba(255,255,255,0.5)';
+  titleDesc.textContent = '为每个场景上传自定义音频（MP3/WAV），未上传则使用系统语音合成';
+  titleRow.append(titleEl, titleDesc);
+  section.appendChild(titleRow);
+
+  const sceneList = document.createElement('div');
+  sceneList.id = 'voice-pack-scene-list';
+  sceneList.style.padding = '0 var(--spacing-lg) var(--spacing-sm)';
+
+  VOICE_SCENES.forEach(({ key, label, desc }) => {
+    sceneList.appendChild(createVoiceSceneRow(key, label, desc));
+  });
+
+  section.appendChild(sceneList);
+  return section;
+}
+
+function createVoiceSceneRow(scene: VoiceScene, labelText: string, descText: string): HTMLElement {
+  const row = document.createElement('div');
+  row.style.marginBottom = '14px';
+
+  const lbl = document.createElement('div');
+  lbl.style.fontSize = '13px';
+  lbl.style.fontWeight = 'bold';
+  lbl.style.marginBottom = '2px';
+  lbl.textContent = labelText;
+
+  const desc = document.createElement('div');
+  desc.style.fontSize = '11px';
+  desc.style.color = 'rgba(255,255,255,0.4)';
+  desc.style.marginBottom = '5px';
+  desc.textContent = descText;
+
+  const statusEl = document.createElement('div');
+  statusEl.id = `vp-scene-${scene}-status`;
+  statusEl.style.fontSize = '12px';
+  statusEl.style.color = 'rgba(255,255,255,0.6)';
+  statusEl.style.marginBottom = '5px';
+  statusEl.textContent = voicePackSettings.scenes[scene] ? '✓ 已上传音频' : '未上传（使用语音合成）';
+
+  const btnRow = document.createElement('div');
+  btnRow.style.display = 'flex';
+  btnRow.style.gap = '8px';
+
+  const uploadBtn = document.createElement('button');
+  uploadBtn.className = 'btn-secondary';
+  uploadBtn.style.fontSize = '12px';
+  uploadBtn.style.padding = '6px 12px';
+  uploadBtn.textContent = '上传音频';
+  uploadBtn.addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const fileId = `vp-${scene}-${crypto.randomUUID()}`;
+      await saveAudioFile({ id: fileId, name: file.name, blob: file });
+      const oldId = voicePackSettings.scenes[scene];
+      if (oldId) pendingAudioDeletions.push(oldId);
+      voicePackSettings.scenes[scene] = fileId;
+      statusEl.textContent = `✓ ${file.name}`;
+      clearBtn.style.display = 'inline-block';
+    };
+    input.click();
+  });
+
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'btn-secondary';
+  clearBtn.style.fontSize = '12px';
+  clearBtn.style.padding = '6px 12px';
+  clearBtn.style.display = voicePackSettings.scenes[scene] ? 'inline-block' : 'none';
+  clearBtn.textContent = '清除';
+  clearBtn.addEventListener('click', () => {
+    const oldId = voicePackSettings.scenes[scene];
+    if (oldId) pendingAudioDeletions.push(oldId);
+    delete voicePackSettings.scenes[scene];
+    statusEl.textContent = '未上传（使用语音合成）';
+    clearBtn.style.display = 'none';
+  });
+
+  btnRow.append(uploadBtn, clearBtn);
+  row.append(lbl, desc, statusEl, btnRow);
+  return row;
+}
+
+async function populateVoicePackUI(): Promise<void> {
+  for (const { key } of VOICE_SCENES) {
+    const statusEl = document.getElementById(`vp-scene-${key}-status`);
+    if (!statusEl) continue;
+    const fileId = voicePackSettings.scenes[key];
+    if (fileId) {
+      const record = await getAudioFile(fileId).catch(() => undefined);
+      statusEl.textContent = record ? `✓ ${record.name}` : '已上传音频';
+    } else {
+      statusEl.textContent = '未上传（使用语音合成）';
+    }
+  }
 }

@@ -3,18 +3,20 @@
  * Full-screen workout execution page with timer, controls, and progress tracking
  */
 
-import { getConfig, saveSession } from '../db';
+import { getConfig, getAudioFile, saveSession } from '../db';
 import { navigate } from '../router';
 import { TimerEngine, type TimerState, type TimerContext } from '../timer/engine';
 import { type AudioManager, getGlobalAudioManager } from '../timer/audio';
+import { VoicePackManager } from '../timer/voice-pack';
 import { loadSnapshot, clearSnapshot, saveIncompleteAndClear, markSnapshotPaused, markSnapshotResumed, initializeSnapshotHooks, type WorkoutSnapshot } from '../timer/snapshot';
 import { setState, getState } from '../state';
 import { createTimerDisplay, updateTimerDisplay } from '../components/timer-display';
 import { createProgressBar } from '../components/progress-bar';
-import type { AppConfig } from '../types';
+import type { AppConfig, MusicSettings, VoiceScene } from '../types';
 
 let timerEngine: TimerEngine | null = null;
 let audioManager: AudioManager | null = null;
+let voicePackManager: VoicePackManager | null = null;
 let currentState: TimerState = 'idle';
 let previousPhase: TimerContext['phase'] | null = null;
 let suppressNextPhaseSound = false;
@@ -22,58 +24,156 @@ let workoutConfig: AppConfig | null = null;
 let announcedCountdownSeconds = new Set<number>();
 let announcedMilestones = new Set<string>();
 
-// 24 varied encouragement phrases — energetic, witty, and motivating.
-// A shuffled queue ensures no phrase repeats until the entire pool is exhausted.
+// ─── Encouragement Pool (60 items) ───────────────────────────────────────────
+// Three styles: 暖心鼓励型 / 能量激励型 / 趣味调侃型 + 状态型
+
 const ENCOURAGEMENT_POOL = [
-  // 能量型
+  // 暖心鼓励型 — 温柔有力量 (刘宇宁风格) ×20
+  '你不是一个人在练，我在这陪着你。',
+  '每一滴汗水，都是给自己最好的礼物。',
+  '不用和别人比，今天比昨天好，就是进步。',
+  '慢慢来，身体会记住每一次用心的动作。',
+  '感受一下呼吸，稳住，你做得很好。',
+  '这个动作很辛苦，但你坚持下来了，真棒。',
+  '累了没关系，但别停，坚持到最后一秒。',
+  '你选择开始，就已经赢了一半。',
+  '每一下都有意义，身体在悄悄变好。',
+  '深吸一口气，把力量送到肌肉里。',
+  '比起昨天，今天的你又强了一点。',
+  '不是每一天都容易，但每一天都值得。',
+  '你的努力，身体都记得。',
+  '保持住，这组快结束了，撑住！',
+  '感受肌肉的发力，这是你变强的声音。',
+  '坚持锻炼的人，永远拥有最好的状态。',
+  '每一个努力的瞬间，都在变成将来的礼物。',
+  '你比昨天更好，这就够了。',
+  '一步一步，不快不慢，都是你的节奏。',
+  '以后的你，一定会感谢现在这个努力的你。',
+  // 能量激励型 ×16
   '收紧核心，冲！',
   '专注发力，每一下都算数！',
   '感受肌肉燃烧，这是变强的证明！',
   '呼气发力，吸气还原，节奏稳住！',
-  // 鼓励型
-  '你比你想象的要强！',
-  '汗水不会说谎，努力都在积累！',
-  '身体在喊停，但意志力说不行！',
-  '坚持住，这把汗流得很值！',
-  '想想你开始的理由，继续！',
-  '以后的你，会感谢现在咬牙的你！',
-  // 幽默段子型
+  '全力以赴，漂亮地完成这组！',
+  '爆发力来了，全力以赴！',
+  '核心收紧，力量到位！',
+  '动作到位，效果翻倍！',
+  '再撑几秒，你可以的！',
+  '全程发力，不要偷懒！',
+  '感受每一块肌肉都在参与！',
+  '加油！就这几下！',
+  '没有做不到，只有不想做！',
+  '你的身体比你想象的强大！',
+  '就差这几秒，拼了！',
+  '这把汗出得值！',
+  // 趣味鼓励型 ×14
   '教练说了，不能停！',
   '别想太多，脑子一热冲就完了！',
   '排出去的是借口，留下来的是实力！',
   '这是送给自己的礼物，不收白不收！',
   '现在多一滴汗，以后多一分自信！',
-  // 激励型
-  '每一下都在改变你的身体，继续！',
-  '不要和自己讲条件，动作到位！',
-  '就这几下，撑过去就是赢！',
+  '偷懒？不存在的！',
+  '这几下，算什么，继续！',
+  '汗水不会说谎，努力都在积累！',
+  '身体在喊停，但意志力说不行！',
+  '坚持住，这把汗流得很值！',
+  '想想你开始的理由，继续！',
+  '以后的你，会感谢现在咬牙的你！',
   '下一个休息就是奖励，冲过去！',
-  '全力以赴，漂亮地完成这组！',
-  // 状态型
   '保持节奏，稳住！',
+  // 状态调整型 ×10
   '专注呼吸，把注意力放在动作上！',
   '姿势保持标准，继续！',
   '节奏稳了，继续，撑住！',
+  '放松肩膀，力量传到对的地方！',
+  '呼吸有节奏，动作更有力！',
+  '不要憋气，放松，继续动！',
+  '一呼一吸，跟着节奏走！',
+  '身体放松，专注在动作上！',
+  '放慢节奏，做到位比做快更重要！',
+  '收腹，挺胸，继续保持！',
+];
+
+// ─── Story Pool (休息时播放的励志小故事) ────────────────────────────────────
+const STORY_POOL = [
+  '有人问，你练那么苦值得吗？他说：对不起自己才最不值。',
+  '一位百岁老人每天散步，他说：腿不走，心就先老了。',
+  '世界冠军说，成功没有捷径，只有每天积累的汗水。',
+  '一棵树，风越大，根扎得越深。你也一样，越练越强。',
+  '困难是磨刀石，经历它，你才能变得更加锋利。',
+  '体能是勇气的基础，身体强壮，心也更有力量。',
+  '最难的不是开始，而是很累时依然选择坚持。',
+  '汗水里藏着答案，只有坚持，才能找到。',
+  '不怕慢，就怕站。走一步，就是前进了一步。',
+  '今天的努力，是给将来自己最好的投资。',
+  '运动是最公平的事，你付出多少，身体就回报多少。',
+  '每一个坚持练习的人，都在用汗水书写自己的故事。',
+  '有人问怎么变强，答案只有一个：每天比昨天多坚持一点。',
+  '身体是最诚实的，你练，它就回应；你停，它就沉默。',
+  '山再高，脚一步一步地走，总能到达。',
+];
+
+// ─── Lyrics Pool (休息时朗诵歌词风格的励志短句) ────────────────────────────
+const LYRICS_POOL = [
+  '风吹过山河，带走了不舍，留下的是坚定前行的勇气。',
+  '一步一步向前，哪怕风雨，哪怕山高路远，心中有光。',
+  '再苦再累，我也要做那个不服输的人。',
+  '拼尽全力，不留遗憾，这才是我的方式。',
+  '每一个坚持都是一首歌，在岁月里慢慢回响。',
+  '勇敢地前行，不回头，前方有你要的答案。',
+  '山再高又怎样，攀登才是我的本能。',
+  '这条路，我选择了就不后悔，一直走下去。',
+  '心中有梦，脚下有路，什么困难都是纸老虎。',
+  '用汗水换明天，用坚持写未来。',
 ];
 
 let encouragementQueue: string[] = [];
 let encouragementIndex = 0;
+let storyQueue: string[] = [];
+let storyIndex = 0;
+let lyricsQueue: string[] = [];
+let lyricsIndex = 0;
+
+function shufflePool(pool: string[]): string[] {
+  const arr = [...pool];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 function initEncouragementQueue(): void {
-  const pool = [...ENCOURAGEMENT_POOL];
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  encouragementQueue = pool;
+  encouragementQueue = shufflePool(ENCOURAGEMENT_POOL);
   encouragementIndex = 0;
+  storyQueue = shufflePool(STORY_POOL);
+  storyIndex = 0;
+  lyricsQueue = shufflePool(LYRICS_POOL);
+  lyricsIndex = 0;
 }
 
 function nextEncouragement(): string {
   if (encouragementIndex >= encouragementQueue.length) {
-    initEncouragementQueue();
+    encouragementQueue = shufflePool(ENCOURAGEMENT_POOL);
+    encouragementIndex = 0;
   }
   return encouragementQueue[encouragementIndex++];
+}
+
+function nextStory(): string {
+  if (storyIndex >= storyQueue.length) {
+    storyQueue = shufflePool(STORY_POOL);
+    storyIndex = 0;
+  }
+  return storyQueue[storyIndex++];
+}
+
+function nextLyrics(): string {
+  if (lyricsIndex >= lyricsQueue.length) {
+    lyricsQueue = shufflePool(LYRICS_POOL);
+    lyricsIndex = 0;
+  }
+  return lyricsQueue[lyricsIndex++];
 }
 
 export function render(container: HTMLElement): void {
@@ -229,6 +329,16 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
     workoutConfig = config;
     initEncouragementQueue();
 
+    // Initialize voice pack manager.
+    voicePackManager = new VoicePackManager(config.voicePackSettings);
+
+    // Initialize background music (async, non-blocking).
+    if (config.musicSettings?.enabled) {
+      loadWorkoutMusic(config.musicSettings).catch((err) => {
+        console.warn('Background music failed to load:', err);
+      });
+    }
+
     // Create timer engine with event handlers
     timerEngine = new TimerEngine({
       onStateChange: handleTimerStateChange,
@@ -285,6 +395,22 @@ async function initializeTimer(snapshot?: WorkoutSnapshot): Promise<void> {
   }
 }
 
+async function loadWorkoutMusic(settings: MusicSettings): Promise<void> {
+  if (!audioManager) return;
+  if (settings.exerciseMusicFileId) {
+    const record = await getAudioFile(settings.exerciseMusicFileId);
+    if (record) {
+      audioManager.loadMusic('exercise', record.blob);
+    }
+  }
+  if (settings.restMusicFileId) {
+    const record = await getAudioFile(settings.restMusicFileId);
+    if (record) {
+      audioManager.loadMusic('rest', record.blob);
+    }
+  }
+}
+
 function handleTimerStateChange(state: TimerState, ctx: TimerContext): void {
   currentState = state;
   playPhaseTransitionSound(state, ctx);
@@ -332,9 +458,10 @@ function playPhaseTransitionSound(state: TimerState, ctx: TimerContext): void {
   if (previousPhase === null) {
     if (phase === 'exercise') {
       audioManager.playExerciseStart();
-      announceExerciseGuidance(ctx);
+      void announceExerciseGuidance(ctx);
     }
     previousPhase = phase;
+    switchBackgroundMusic(phase);
     return;
   }
 
@@ -344,11 +471,12 @@ function playPhaseTransitionSound(state: TimerState, ctx: TimerContext): void {
     }
     if (phase === 'exercise') {
       audioManager.playExerciseStart();
-      announceExerciseGuidance(ctx);
+      void announceExerciseGuidance(ctx);
     }
     if (phase === 'rest' || phase === 'project-rest') {
-      announcePhaseStart(phase);
+      void announcePhaseStart(phase);
     }
+    switchBackgroundMusic(phase);
   }
 
   previousPhase = phase;
@@ -401,9 +529,25 @@ function handleTimerTick(remainingMs: number): void {
   }
 }
 
-function announceExerciseGuidance(ctx: TimerContext): void {
+function switchBackgroundMusic(phase: TimerContext['phase']): void {
+  if (!audioManager || !workoutConfig?.musicSettings?.enabled || !audioManager.hasMusic()) return;
+  const settings = workoutConfig.musicSettings;
+  const isExercise = phase === 'exercise';
+  audioManager.playMusicForPhase(
+    isExercise ? 'exercise' : 'rest',
+    isExercise ? (settings.exerciseVolume ?? 0.5) : (settings.restVolume ?? 0.3)
+  );
+}
+
+async function announceExerciseGuidance(ctx: TimerContext): Promise<void> {
   if (!audioManager || !workoutConfig?.audioCoach?.voiceGuidanceEnabled) {
     return;
+  }
+
+  // Try voice pack first.
+  if (voicePackManager) {
+    const played = await voicePackManager.tryPlayScene('exercise_start');
+    if (played) return;
   }
 
   const exercise = workoutConfig.exercises[ctx.exerciseIndex];
@@ -422,15 +566,36 @@ function announceExerciseGuidance(ctx: TimerContext): void {
   audioManager.speak(parts.join(' '));
 }
 
-function announcePhaseStart(phase: TimerContext['phase']): void {
+async function announcePhaseStart(phase: TimerContext['phase']): Promise<void> {
   if (!audioManager || !workoutConfig?.audioCoach?.voiceGuidanceEnabled) {
     return;
   }
 
-  if (phase === 'rest') {
-    audioManager.speak('休息开始，调整呼吸。');
-  } else if (phase === 'project-rest') {
-    audioManager.speak('动作切换休息，准备下一个动作。');
+  if (phase === 'rest' || phase === 'project-rest') {
+    const scene: VoiceScene = phase === 'rest' ? 'rest_start' : 'project_rest_start';
+
+    // Try voice pack first.
+    if (voicePackManager) {
+      const played = await voicePackManager.tryPlayScene(scene);
+      if (played) return;
+    }
+
+    // TTS with randomised story / lyrics / fixed content.
+    const rand = Math.random();
+    if (rand < 0.35) {
+      // 播放励志小故事
+      audioManager.speak(nextStory());
+    } else if (rand < 0.6) {
+      // 播放歌词风格励志短句
+      audioManager.speak(nextLyrics());
+    } else {
+      // Fixed phase announcement
+      if (phase === 'rest') {
+        audioManager.speak('休息开始，调整呼吸。');
+      } else {
+        audioManager.speak('动作切换休息，准备下一个动作。');
+      }
+    }
   }
 }
 
@@ -501,9 +666,11 @@ function handlePauseResume(): void {
   if (currentState === 'paused') {
     timerEngine.resume();
     markSnapshotResumed();
+    audioManager?.resumeBackgroundMusic();
   } else {
     timerEngine.pause();
     markSnapshotPaused();
+    audioManager?.pauseBackgroundMusic();
   }
 }
 
@@ -615,6 +782,9 @@ function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
     timerEngine = null;
   }
   audioManager?.stopVoice();
+  audioManager?.stopBackgroundMusic();
+  voicePackManager?.destroy();
+  voicePackManager = null;
   if (options?.clearSnapshot) {
     clearSnapshot();
   }
@@ -626,6 +796,10 @@ function cleanupWorkout(options?: { clearSnapshot?: boolean }): void {
   announcedMilestones = new Set<string>();
   encouragementQueue = [];
   encouragementIndex = 0;
+  storyQueue = [];
+  storyIndex = 0;
+  lyricsQueue = [];
+  lyricsIndex = 0;
 }
 
 export function cleanup(): void {

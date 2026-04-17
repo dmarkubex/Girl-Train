@@ -1,5 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import type { AppConfig, AudioCoachSettings, Session, StreakInfo } from './types.js';
+import type { AppConfig, AudioCoachSettings, AudioFileRecord, MusicSettings, VoicePackSettings, Session, StreakInfo } from './types.js';
 import { getBusinessDate } from './utils/date.js';
 
 interface ExerciseTrackerDB extends DBSchema {
@@ -15,13 +15,27 @@ interface ExerciseTrackerDB extends DBSchema {
       status: string;
     };
   };
+  'audio-files': {
+    key: string;
+    value: AudioFileRecord;
+  };
 }
 
 const DB_NAME = 'exercise-tracker';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const DEFAULT_AUDIO_COACH: AudioCoachSettings = {
   voiceGuidanceEnabled: true,
   countdownReminderEnabled: true
+};
+
+const DEFAULT_MUSIC_SETTINGS: MusicSettings = {
+  enabled: false,
+  exerciseVolume: 0.5,
+  restVolume: 0.3
+};
+
+const DEFAULT_VOICE_PACK_SETTINGS: VoicePackSettings = {
+  scenes: {}
 };
 
 let dbInstance: IDBPDatabase<ExerciseTrackerDB> | null = null;
@@ -36,6 +50,10 @@ const migrations: Array<(db: IDBPDatabase<ExerciseTrackerDB>) => void | Promise<
     const sessionsStore = db.createObjectStore('sessions', { keyPath: 'sessionId' });
     sessionsStore.createIndex('date', 'date');
     sessionsStore.createIndex('status', 'status');
+  },
+  // v1 → v2: add audio-files store
+  async (db) => {
+    db.createObjectStore('audio-files', { keyPath: 'id' });
   }
 ];
 
@@ -85,6 +103,18 @@ function normalizeConfig(config: AppConfig): AppConfig {
     audioCoach: {
       ...DEFAULT_AUDIO_COACH,
       ...config.audioCoach
+    },
+    musicSettings: {
+      ...DEFAULT_MUSIC_SETTINGS,
+      ...config.musicSettings
+    },
+    voicePackSettings: {
+      ...DEFAULT_VOICE_PACK_SETTINGS,
+      ...config.voicePackSettings,
+      scenes: {
+        ...DEFAULT_VOICE_PACK_SETTINGS.scenes,
+        ...config.voicePackSettings?.scenes
+      }
     }
   };
 }
@@ -116,7 +146,9 @@ export function getDefaultConfig(): AppConfig {
       }
     ],
     projectRestSeconds: 60,
-    audioCoach: DEFAULT_AUDIO_COACH
+    audioCoach: DEFAULT_AUDIO_COACH,
+    musicSettings: { ...DEFAULT_MUSIC_SETTINGS },
+    voicePackSettings: { scenes: {} }
   };
 }
 
@@ -344,4 +376,28 @@ export async function calculateStreak(): Promise<StreakInfo> {
   maxStreak = Math.max(maxStreak, tempStreak);
 
   return { currentStreak, maxStreak };
+}
+
+/**
+ * Save an audio file record (music or voice pack clip).
+ */
+export async function saveAudioFile(record: AudioFileRecord): Promise<void> {
+  const db = await openDatabase();
+  await db.put('audio-files', record);
+}
+
+/**
+ * Get an audio file record by ID.
+ */
+export async function getAudioFile(id: string): Promise<AudioFileRecord | undefined> {
+  const db = await openDatabase();
+  return db.get('audio-files', id);
+}
+
+/**
+ * Delete an audio file record by ID.
+ */
+export async function deleteAudioFile(id: string): Promise<void> {
+  const db = await openDatabase();
+  await db.delete('audio-files', id);
 }

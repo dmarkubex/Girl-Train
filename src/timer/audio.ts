@@ -3,6 +3,12 @@ export class AudioManager {
   private initialized: boolean = false;
   private voiceEnabled: boolean = false;
 
+  // Background music
+  private exerciseMusicElement: HTMLAudioElement | null = null;
+  private restMusicElement: HTMLAudioElement | null = null;
+  private currentMusicElement: HTMLAudioElement | null = null;
+  private musicBlobUrls: string[] = [];
+
   /**
    * Initialize AudioContext - MUST be called from user gesture (click/touch)
    */
@@ -77,15 +83,29 @@ export class AudioManager {
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'zh-CN';
-      utterance.rate = options?.rate ?? 1;
-      utterance.pitch = options?.pitch ?? 1;
+      // Lower pitch (0.87) and slightly slower rate (0.95) for a warm, mature male voice feel.
+      utterance.rate = options?.rate ?? 0.95;
+      utterance.pitch = options?.pitch ?? 0.87;
       utterance.volume = options?.volume ?? 1;
 
-      // Explicitly pick a Chinese voice when available (avoids silent fallback on iOS).
+      // Prefer a male Chinese voice when available.
+      // Known male Chinese voice names by platform:
+      //   Windows/Edge: "Microsoft Yunxi Online" (zh-CN), "Microsoft Kangkang"
+      //   Azure Cognitive: "zh-CN-YunxiNeural", "zh-CN-YunyangNeural"
+      // If none is found the first Chinese voice is used as a fallback.
       const voices = window.speechSynthesis.getVoices();
-      const zhVoice = voices.find(v => v.lang.startsWith('zh'));
-      if (zhVoice) {
-        utterance.voice = zhVoice;
+      const maleChinese = voices.find(v =>
+        v.lang.startsWith('zh') &&
+        (v.name.toLowerCase().includes('male') ||
+          v.name.includes('男') ||
+          v.name.includes('Yunxi') ||
+          v.name.includes('Yunyang') ||
+          v.name.toLowerCase().includes('kangkang'))
+      );
+      const anyChinese = voices.find(v => v.lang.startsWith('zh'));
+      const selected = maleChinese || anyChinese;
+      if (selected) {
+        utterance.voice = selected;
       }
 
       // Drop pending utterances so new guidance stays relevant to current phase.
@@ -223,11 +243,98 @@ export class AudioManager {
    */
   destroy(): void {
     this.stopVoice();
+    this.stopBackgroundMusic();
     if (this.ctx && this.ctx.state !== 'closed') {
       this.ctx.close();
     }
     this.ctx = null;
     this.initialized = false;
+  }
+
+  // ─── Background Music ──────────────────────────────────────────────────────
+
+  /**
+   * Load a music file blob for a given phase.
+   * Call this before starting the workout.
+   */
+  loadMusic(type: 'exercise' | 'rest', blob: Blob): void {
+    const url = URL.createObjectURL(blob);
+    this.musicBlobUrls.push(url);
+    const el = new Audio(url);
+    el.loop = true;
+    if (type === 'exercise') {
+      this.exerciseMusicElement = el;
+    } else {
+      this.restMusicElement = el;
+    }
+  }
+
+  /**
+   * Play or switch background music for the given workout phase.
+   * Uses the rest track (if loaded) during rest/project-rest,
+   * otherwise falls back to the exercise track at the supplied volume.
+   */
+  playMusicForPhase(phase: 'exercise' | 'rest', volume: number): void {
+    const clampedVol = Math.max(0, Math.min(1, volume));
+    const target =
+      phase === 'rest' && this.restMusicElement
+        ? this.restMusicElement
+        : this.exerciseMusicElement;
+
+    if (!target) {
+      // No track loaded – just adjust volume on whatever is playing.
+      if (this.currentMusicElement) {
+        this.currentMusicElement.volume = clampedVol;
+      }
+      return;
+    }
+
+    if (this.currentMusicElement && this.currentMusicElement !== target) {
+      // Fade out and switch tracks.
+      this.currentMusicElement.pause();
+      this.currentMusicElement.currentTime = 0;
+    }
+
+    this.currentMusicElement = target;
+    target.volume = clampedVol;
+
+    if (target.paused) {
+      target.play().catch((err) => {
+        // Autoplay may be blocked by the browser until a user gesture is made.
+        console.warn('Background music autoplay blocked:', err);
+      });
+    }
+  }
+
+  /** Pause background music (e.g. workout paused). */
+  pauseBackgroundMusic(): void {
+    this.currentMusicElement?.pause();
+  }
+
+  /** Resume background music after a pause. */
+  resumeBackgroundMusic(): void {
+    if (this.currentMusicElement?.paused) {
+      this.currentMusicElement.play().catch(() => {});
+    }
+  }
+
+  /** Stop and release all background music resources. */
+  stopBackgroundMusic(): void {
+    if (this.currentMusicElement) {
+      this.currentMusicElement.pause();
+      this.currentMusicElement = null;
+    }
+    this.exerciseMusicElement = null;
+    this.restMusicElement = null;
+    for (const url of this.musicBlobUrls) {
+      URL.revokeObjectURL(url);
+    }
+    this.musicBlobUrls = [];
+  }
+
+  /** Returns true when at least an exercise music track has been loaded. */
+  hasMusic(): boolean {
+    return this.exerciseMusicElement !== null;
   }
 }
 
